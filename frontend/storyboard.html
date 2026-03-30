@@ -572,26 +572,16 @@ async function generateImages(prompt, container) {
   progWrap.style.display = "none";
 }
 
-async function generateSingleImage(prompt, modelId, seed) {
+async function generateSingleImage(prompt, modelKey, seed) {
   try {
-    var body = { inputs: prompt, parameters: { seed: seed, num_inference_steps: 20 } };
-    var res = await fetch("https://api-inference.huggingface.co/models/" + modelId, {
+    var res = await fetch("http://127.0.0.1:8001/generate", {
       method: "POST",
-      headers: {
-        "Authorization": "Bearer " + HF_TOKEN,
-        "Content-Type": "application/json",
-        "x-wait-for-model": "true"
-      },
-      body: JSON.stringify(body)
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({prompt: prompt, model_key: modelKey, seed: seed})
     });
-
-    if (!res.ok) {
-      console.error("HF error:", res.status, await res.text());
-      return null;
-    }
-
-    var blob = await res.blob();
-    return URL.createObjectURL(blob);
+    if (!res.ok) return null;
+    var data = await res.json();
+    return data.image;
   } catch(e) {
     console.error("generateSingleImage error:", e);
     return null;
