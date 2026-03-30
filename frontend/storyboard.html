@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>超級導演分鏡系統</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600&family=DM+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap');
+:root {
+  --bg:#0a0908; --bg2:#131210; --bg3:#1c1a17; --bg4:#222018;
+  --border:#2a2822; --border2:#383530;
+  --text:#f0ebe0; --text2:#a09890; --text3:#5a5650;
+  --gold:#c8a84b; --gold2:#e4c872;
+  --teal:#3dbdb5; --coral:#e07860; --purple:#8878d8; --green:#68b868;
+}
+* { box-sizing:border-box; margin:0; padding:0; }
+html, body { height:auto; overflow-y:auto; }
+body { font-family:'Plus Jakarta Sans',sans-serif; background:var(--bg); color:var(--text); }
+
+.hdr { padding:16px 28px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:14px; background:rgba(10,9,8,0.97); position:sticky; top:0; z-index:100; }
+.logo { width:36px; height:36px; background:linear-gradient(135deg,var(--gold),var(--coral)); border-radius:9px; display:flex; align-items:center; justify-content:center; font-size:17px; flex-shrink:0; }
+.hdr h1 { font-family:'Noto Serif TC',serif; font-size:14px; font-weight:600; }
+.hdr p { font-size:10px; color:var(--text3); margin-top:1px; }
+.ldot { margin-left:auto; width:6px; height:6px; border-radius:50%; background:var(--green); box-shadow:0 0 8px var(--green); animation:pu 2s ease-in-out infinite; }
+@keyframes pu { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+.wrap { max-width:900px; margin:0 auto; padding:28px; display:flex; flex-direction:column; gap:24px; }
+
+.input-card { background:var(--bg2); border:1px solid var(--border); border-radius:16px; padding:24px; display:flex; flex-direction:column; gap:16px; }
+.flabel { font-size:10px; font-weight:600; letter-spacing:0.1em; text-transform:uppercase; color:var(--text3); margin-bottom:7px; }
+.row2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.row3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; }
+textarea, select { width:100%; background:var(--bg3); border:1px solid var(--border); border-radius:10px; padding:11px 13px; color:var(--text); font-family:'Plus Jakarta Sans',sans-serif; font-size:13px; outline:none; transition:border-color 0.2s; line-height:1.6; }
+textarea:focus, select:focus { border-color:var(--gold); background:var(--bg4); }
+textarea::placeholder { color:var(--text3); }
+textarea { resize:vertical; }
+select { appearance:none; cursor:pointer; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%235a5650' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 12px center; }
+select option { background:var(--bg3); }
+
+.cnt-grid { display:grid; grid-template-columns:repeat(8,1fr); gap:6px; }
+.cnt { background:var(--bg3); border:1px solid var(--border); border-radius:8px; padding:8px 4px; color:var(--text2); font-size:12px; font-weight:500; cursor:pointer; text-align:center; transition:all 0.15s; font-family:'Plus Jakarta Sans',sans-serif; }
+.cnt:hover { border-color:var(--gold); color:var(--gold); }
+.cnt.on { background:rgba(200,168,75,0.12); border-color:var(--gold); color:var(--gold2); }
+
+.prog { display:none; }
+.prog-bar { height:2px; background:var(--border); border-radius:1px; overflow:hidden; margin-bottom:6px; }
+.prog-fill { height:100%; background:linear-gradient(90deg,var(--gold),var(--coral),var(--teal)); animation:sl 1.4s linear infinite; width:30%; border-radius:1px; }
+@keyframes sl { 0%{transform:translateX(-200%)} 100%{transform:translateX(500%)} }
+.prog-text { font-size:11px; color:var(--text3); text-align:center; }
+
+.gen-btn { background:linear-gradient(135deg,var(--gold),var(--coral)); border:none; border-radius:12px; padding:14px; color:#0a0908; font-family:'Plus Jakarta Sans',sans-serif; font-size:14px; font-weight:600; cursor:pointer; width:100%; display:flex; align-items:center; justify-content:center; gap:8px; transition:opacity 0.2s; }
+.gen-btn:hover { opacity:0.9; }
+.gen-btn:disabled { opacity:0.35; cursor:not-allowed; }
+
+/* Result blocks */
+.block { background:var(--bg2); border:1px solid var(--border); border-radius:16px; overflow:visible; }
+.bhead { padding:14px 18px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:10px; }
+.bnum { font-size:10px; font-weight:700; padding:3px 9px; border-radius:999px; letter-spacing:0.1em; }
+.n1{background:rgba(200,168,75,0.15);color:var(--gold2);}
+.n2{background:rgba(61,189,181,0.15);color:var(--teal);}
+.n3{background:rgba(224,120,96,0.15);color:var(--coral);}
+.n4{background:rgba(136,120,216,0.15);color:var(--purple);}
+.btitle { font-size:14px; font-weight:500; }
+.bsub { font-size:11px; color:var(--text3); margin-left:auto; }
+
+.story-box { padding:18px 20px; font-family:'Noto Serif TC',serif; font-size:14px; color:var(--text2); line-height:2; border-bottom:1px solid var(--border); }
+.dir-note { margin:12px 20px; padding:12px 14px; background:rgba(200,168,75,0.06); border-left:2px solid var(--gold); border-radius:0 8px 8px 0; font-size:12px; color:var(--gold2); line-height:1.7; font-style:italic; }
+
+.scenes-wrap { padding:14px; display:flex; flex-direction:column; gap:12px; }
+.sc-card { background:var(--bg3); border:1px solid var(--border); border-radius:12px; overflow:visible; }
+.sc-head { padding:11px 15px; display:flex; align-items:center; gap:10px; border-bottom:1px solid var(--border); }
+.sc-num { width:26px; height:26px; border-radius:7px; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; flex-shrink:0; }
+.sc-meta { flex:1; min-width:0; }
+.sc-name { font-size:13px; font-weight:600; }
+.sc-info { font-size:10px; color:var(--text3); margin-top:1px; }
+.sc-badge { font-size:10px; padding:2px 8px; border-radius:999px; background:var(--bg4); color:var(--text3); border:1px solid var(--border); white-space:nowrap; }
+.sc-caption { padding:9px 15px; font-family:'Noto Serif TC',serif; font-size:13px; color:var(--gold2); border-bottom:1px solid var(--border); font-style:italic; background:rgba(200,168,75,0.04); }
+.sc-action { padding:10px 15px; font-size:12px; color:var(--text2); line-height:1.7; border-bottom:1px solid var(--border); }
+.sc-alabel { font-size:9px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--text3); margin-bottom:4px; }
+.sc-prompt { padding:12px 14px; }
+.plabel { font-size:9px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; margin-bottom:7px; display:flex; align-items:center; gap:5px; flex-wrap:wrap; }
+.pdot { width:5px; height:5px; border-radius:50%; flex-shrink:0; }
+.cam-tag { font-size:9px; padding:1px 6px; border-radius:4px; font-family:'DM Mono',monospace; }
+
+.pbox { font-family:'DM Mono',monospace; font-size:11px; color:var(--text2); line-height:1.7; background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:11px 80px 11px 12px; cursor:pointer; transition:border-color 0.15s; position:relative; word-break:break-word; white-space:pre-wrap; }
+.pbox:hover { border-color:var(--gold); background:rgba(200,168,75,0.03); }
+.pbox-hint { position:absolute; top:8px; right:10px; font-size:10px; color:var(--text3); font-family:'Plus Jakarta Sans',sans-serif; background:var(--bg3); padding:2px 7px; border-radius:4px; border:1px solid var(--border); }
+.pbox:hover .pbox-hint { color:var(--gold); border-color:var(--gold); }
+.pbox.copied { border-color:var(--green) !important; }
+.pbox.copied .pbox-hint { color:var(--green) !important; border-color:var(--green); }
+
+.chars-grid { padding:14px; display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:12px; }
+.char-card { background:var(--bg3); border:1px solid var(--border); border-radius:12px; padding:14px; }
+.char-role { font-size:10px; color:var(--text3); margin-bottom:3px; text-transform:uppercase; letter-spacing:0.06em; }
+.char-name { font-size:15px; font-weight:600; color:var(--coral); margin-bottom:8px; }
+.char-desc { font-size:11px; color:var(--text2); line-height:1.7; margin-bottom:10px; }
+
+.style-inner { padding:16px 18px; }
+.style-tags { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px; }
+.stag { font-size:10px; padding:2px 8px; border-radius:999px; font-weight:500; }
+
+::-webkit-scrollbar { width:4px; }
+.save-item { background:var(--bg3); border:1px solid var(--border); border-radius:8px; padding:10px 14px; display:flex; align-items:center; gap:10px; cursor:pointer; transition:border-color 0.15s; }
+.save-item:hover { border-color:var(--gold); }
+.save-title { flex:1; font-size:13px; color:var(--text); font-weight:500; }
+.save-date { font-size:10px; color:var(--text3); }
+.save-del { font-size:11px; color:var(--text3); padding:3px 8px; border-radius:6px; border:1px solid var(--border); background:none; cursor:pointer; font-family:inherit; transition:all 0.15s; }
+.save-del:hover { color:var(--coral); border-color:var(--coral); }
+.save-actions { display:flex; gap:8px; margin-top:12px; }
+.save-btn { flex:1; background:var(--bg3); border:1px solid var(--border); border-radius:8px; padding:9px; color:var(--text2); font-size:12px; font-weight:500; cursor:pointer; font-family:inherit; transition:all 0.15s; display:flex; align-items:center; justify-content:center; gap:6px; }
+.save-btn:hover { border-color:var(--gold); color:var(--gold); }
+::-webkit-scrollbar-thumb { background:var(--border2); border-radius:2px; }
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="logo">🎬</div>
+  <div>
+    <h1>超級導演分鏡系統</h1>
+    <p>AI 專業分鏡 × 運鏡設計 × 咒語生成</p>
+  </div>
+  <div class="ldot"></div>
+</div>
+
+<div class="wrap">
+
+  <div class="input-card">
+    <div>
+      <div class="flabel">故事描述</div>
+      <textarea id="story" rows="5" placeholder="用幾句話說你的故事，AI 會補充細節並拆成專業分鏡。
+
+例如：一個叫小花的女孩，家境貧困，每天走一小時山路上學。NPO 志工來到村子，送她書包和文具。小花感動落淚，從此更努力讀書，夢想成為老師。"></textarea>
+    </div>
+
+    <div>
+      <div class="flabel">場景數量</div>
+      <div class="cnt-grid">
+        <button class="cnt" onclick="setN(this,6)">6</button>
+        <button class="cnt" onclick="setN(this,8)">8</button>
+        <button class="cnt on" onclick="setN(this,10)">10</button>
+        <button class="cnt" onclick="setN(this,12)">12</button>
+        <button class="cnt" onclick="setN(this,15)">15</button>
+        <button class="cnt" onclick="setN(this,18)">18</button>
+        <button class="cnt" onclick="setN(this,20)">20</button>
+        <button class="cnt" onclick="setN(this,24)">24</button>
+      </div>
+    </div>
+    <div class="row2">
+      <div>
+        <div class="flabel">動畫風格</div>
+        <select id="style">
+          <option value="pixar">皮克斯動畫</option>
+          <option value="ghibli">宮崎駿吉卜力</option>
+          <option value="anime">日系溫馨動畫</option>
+          <option value="watercolor">水彩童書風</option>
+          <option value="korean">韓系療癒動畫</option>
+          <option value="cartoon">手繪卡通風</option>
+        </select>
+      </div>
+      <div>
+        <div class="flabel">情緒基調</div>
+        <select id="emotion">
+          <option value="heartwarming">溫馨感動</option>
+          <option value="hopeful">充滿希望</option>
+          <option value="inspiring">振奮人心</option>
+          <option value="healing">安靜療癒</option>
+          <option value="joyful">活潑歡樂</option>
+        </select>
+      </div>
+    </div>
+    <div class="prog" id="prog">
+      <div class="prog-bar"><div class="prog-fill"></div></div>
+      <div class="prog-text" id="prog-text">超級導演思考中...</div>
+    </div>
+    <button class="gen-btn" id="gen-btn" onclick="generate()">
+      <span>✦</span> 超級導演，開拍！
+    </button>
+
+    <div id="saves-wrap" style="display:none;">
+      <div class="flabel" style="margin-bottom:8px;">已儲存的分鏡</div>
+      <div id="saves-list" style="display:flex;flex-direction:column;gap:6px;"></div>
+    </div>
+  </div>
+
+  <div id="results"></div>
+
+</div>
+
+<script>
+var N = 10;
+var GEMINI_KEY = "AIzaSyDw2BW7KUhPsQ7gR08dfa5j0zL_WZ8N_uc";
+
+var STYLES = {
+  pixar:      {name:"皮克斯動畫",   base:"Pixar 3D animation style, subsurface scattering skin, expressive character design, soft cinematic lighting, vibrant warm colors, high detail, consistent art style, emotional depth",   video:"Pixar 3D smooth character motion, expressive micro-animations, cinematic depth of field, warm color grading"},
+  ghibli:     {name:"宮崎駿吉卜力", base:"Studio Ghibli anime style, hand-drawn watercolor texture, soft earthy colors, gentle brush strokes, warm natural lighting, whimsical atmosphere, 2D cel shading",                          video:"Ghibli fluid animation, gentle wind movement, hand-drawn motion, soft watercolor transitions"},
+  anime:      {name:"日系溫馨動畫", base:"Japanese anime style, pastel soft colors, clean line art, soft cel shading, warm golden light, heartwarming slice-of-life, consistent character design",                                    video:"Japanese anime smooth animation, soft pastel motion blur, gentle character expressions"},
+  watercolor: {name:"水彩童書風",   base:"watercolor children book illustration, soft brush texture, dreamy pastel palette, hand-painted look, gentle ink outlines, storybook aesthetic",                                            video:"watercolor paint animation, gentle brush stroke motion, dreamy color bloom, storybook floating camera"},
+  korean:     {name:"韓系療癒動畫", base:"Korean webtoon animation style, clean lines, soft muted colors, cute rounded characters, cozy healing atmosphere, minimalist backgrounds",                                                 video:"Korean webtoon smooth animation, minimal motion, soft color transitions, cozy intimate camera"},
+  cartoon:    {name:"手繪卡通風",   base:"2D hand-drawn cartoon animation, warm flat colors, expressive simple characters, clean bold outlines, cheerful wholesome aesthetic",                                                       video:"2D cartoon squash-and-stretch animation, bouncy character movement, warm flat color motion"}
+};
+
+var EMOTIONS = {
+  heartwarming:"heartwarming, touching, tender, gentle tears of joy, emotionally warm",
+  hopeful:"hopeful, inspiring, uplifting, bright optimistic energy",
+  inspiring:"inspiring, powerful, moving, triumphant, emotionally resonant",
+  healing:"quiet, deeply healing, peaceful, soothing, calm and comforting",
+  joyful:"joyful, playful, energetic, cheerful, celebratory"
+};
+
+var COLORS = [
+  {bg:"rgba(200,168,75,0.15)",  c:"#c8a84b"},
+  {bg:"rgba(61,189,181,0.15)",  c:"#3dbdb5"},
+  {bg:"rgba(224,120,96,0.15)",  c:"#e07860"},
+  {bg:"rgba(136,120,216,0.15)", c:"#8878d8"},
+  {bg:"rgba(104,184,104,0.15)", c:"#68b868"},
+  {bg:"rgba(88,152,216,0.15)",  c:"#5898d8"},
+  {bg:"rgba(216,104,168,0.15)", c:"#d868a8"},
+  {bg:"rgba(200,200,75,0.15)",  c:"#c8c84b"}
+];
+
+function setN(btn, n) {
+  N = n;
+  document.querySelectorAll('.cnt').forEach(function(b){ b.classList.remove('on'); });
+  btn.classList.add('on');
+}
+
+function el(tag, cls) {
+  var e = document.createElement(tag);
+  if (cls) e.className = cls;
+  return e;
+}
+
+function makePBox(text, accentColor) {
+  var box = el('div', 'pbox');
+  box.textContent = text;
+  if (accentColor) box.style.color = accentColor;
+  var hint = el('span', 'pbox-hint');
+  hint.textContent = '點擊複製';
+  box.appendChild(hint);
+  box.addEventListener('click', function() {
+    navigator.clipboard.writeText(text).then(function() {
+      box.classList.add('copied');
+      hint.textContent = '已複製 ✓';
+      setTimeout(function(){ box.classList.remove('copied'); hint.textContent = '點擊複製'; }, 2000);
+    });
+  });
+  return box;
+}
+
+function makeBlock(numCls, numTxt, title, sub) {
+  var b = el('div', 'block');
+  var h = el('div', 'bhead');
+  var n = el('span', 'bnum ' + numCls); n.textContent = numTxt;
+  var t = el('span', 'btitle'); t.textContent = title;
+  var s = el('span', 'bsub'); s.textContent = sub;
+  h.appendChild(n); h.appendChild(t); h.appendChild(s);
+  b.appendChild(h);
+  return b;
+}
+
+function makeSceneCard(sc, i, promptText, promptColor, isVideo) {
+  var col = COLORS[i % COLORS.length];
+  var card = el('div', 'sc-card');
+
+  var head = el('div', 'sc-head');
+  var num = el('div', 'sc-num');
+  num.style.background = col.bg; num.style.color = col.c;
+  num.textContent = sc.id;
+  var meta = el('div', 'sc-meta');
+  var name = el('div', 'sc-name');
+  name.style.color = col.c; name.textContent = sc.name;
+  var info = el('div', 'sc-info');
+  info.textContent = (sc.location||'') + (sc.lighting ? ' ／ ' + sc.lighting : '');
+  meta.appendChild(name); meta.appendChild(info);
+  var badge = el('span', 'sc-badge'); badge.textContent = sc.time;
+  head.appendChild(num); head.appendChild(meta); head.appendChild(badge);
+  card.appendChild(head);
+
+  var cap = el('div', 'sc-caption');
+  cap.textContent = '\u201c' + sc.caption + '\u201d';
+  card.appendChild(cap);
+
+  var act = el('div', 'sc-action');
+  var al = el('div', 'sc-alabel');
+  al.textContent = isVideo ? '運鏡 ／ 場景動作' : '場景動作';
+  var at = el('div');
+  at.textContent = isVideo ? (sc.camera_zh||'') + ' ／ ' + (sc.action||'') : (sc.action||'');
+  act.appendChild(al); act.appendChild(at);
+  card.appendChild(act);
+
+  var pw = el('div', 'sc-prompt');
+  var pl = el('div', 'plabel');
+  var pd = el('div', 'pdot');
+  pd.style.background = promptColor || 'var(--gold)';
+  var pt = el('span');
+  pt.style.color = promptColor || 'var(--gold2)';
+  pt.textContent = isVideo ? '動畫動作咒語' : '靜態圖片咒語';
+  pl.appendChild(pd); pl.appendChild(pt);
+  if (isVideo && sc.camera_zh) {
+    var ct = el('span', 'cam-tag');
+    ct.style.background = 'rgba(61,189,181,0.15)';
+    ct.style.color = 'var(--teal)';
+    ct.textContent = sc.camera_zh;
+    pl.appendChild(ct);
+  }
+  pw.appendChild(pl);
+  pw.appendChild(makePBox(promptText, promptColor));
+  card.appendChild(pw);
+  return card;
+}
+
+async function callGemini(prompt) {
+  var res = await fetch(
+    "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + GEMINI_KEY,
+    {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({
+        contents: [{parts: [{text: prompt}]}],
+        generationConfig: {maxOutputTokens: 8000, temperature: 0.8}
+      })
+    }
+  );
+  var data = await res.json();
+  if (data.error) throw new Error(data.error.message);
+  return data.candidates[0].content.parts[0].text.replace(/```json|```/g,'').trim();
+}
+
+async function generate() {
+  var story = document.getElementById('story').value.trim();
+  var chars = '';
+  var styleKey = document.getElementById('style').value;
+  var emotionKey = document.getElementById('emotion').value;
+  if (!story) { alert('請先輸入故事！'); return; }
+
+  var btn = document.getElementById('gen-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span>&#x27F3;</span> 超級導演思考中...';
+  document.getElementById('prog').style.display = 'block';
+  document.getElementById('results').innerHTML = '';
+
+  var S = STYLES[styleKey];
+  var E = EMOTIONS[emotionKey];
+
+  try {
+    document.getElementById('prog-text').textContent = '第一步：規劃故事與角色...';
+
+    var p1 = "你是動畫導演兼 AI 提示詞專家。只輸出 JSON，不要任何其他文字。\n\n" +
+      "故事：" + story + "\n動畫風格：" + S.name + "\n風格描述：" + S.base + "\n情緒：" + E + "\n\n" +
+      "請自動從故事中找出所有角色（主角和配角都要），為每人設計完整外觀和生圖咒語。\n\n" +
+      '{' +
+      '"enhanced_story":"美化故事（繁中150字內）",' +
+      '"director_vision":"導演理念（繁中40字內）",' +
+      '"music_suggestion":"音樂建議（繁中15字內）",' +
+      '"style_prompt":"畫風咒語（英文）：' + S.base + '+' + E + '+consistent character design+unified color grading，70字以上",' +
+      '"characters":[{' +
+      '"name":"角色名（從故事自動找出）",' +
+      '"role":"角色身份",' +
+      '"age":"年齡",' +
+      '"appearance":"完整外觀（繁中）：髮型+臉型+膚色+服裝+體型+特徵",' +
+      '"personality":"個性（繁中）",' +
+      '"image_prompt":"角色全身正面參考圖英文咒語：詳細外觀+服裝+' + S.base + '+white background+character design sheet+full body front view+single character only+no text+no watermark+no frame+no border+no title+no label+clean image，60字以上"' +
+      '}]' +
+      '，請依故事自動列出所有角色}';
+
+    var raw1 = await callGemini(p1);
+    var part1 = JSON.parse(raw1);
+
+    var allScenes = [];
+    var batchSize = 5;
+    var batches = Math.ceil(N / batchSize);
+
+    for (var b = 0; b < batches; b++) {
+      var start = b * batchSize + 1;
+      var end = Math.min((b+1)*batchSize, N);
+      var count = end - start + 1;
+      document.getElementById('prog-text').textContent = '生成分鏡 ' + start + '-' + end + ' / ' + N + '...';
+
+      var p2 = "只輸出 JSON 陣列，不要其他文字。\n" +
+        "故事：" + part1.enhanced_story + "\n風格：" + S.name + " - " + S.base + "\n情緒：" + E + "\n" +
+        "總場景 " + N + " 個，生成第 " + start + " 到第 " + end + " 個。每個場景時間從 " + ((start-1)*5) + " 秒開始，每段5秒。\n\n" +
+        '[{"id":' + start + ',"name":"場景名4字內","time":"' + ((start-1)*5) + '-' + (start*5) + '秒",' +
+        '"location":"地點10字內繁中","caption":"字幕10字內繁中","action":"動作25字內繁中",' +
+        '"camera_zh":"運鏡8字內繁中","camera_en":"camera movement","lighting":"光線8字內繁中",' +
+        '"emotion_note":"情感12字內繁中",' +
+        '"image_prompt":"靜態圖英文咒語：場景+角色+光線+' + S.base + '+' + E + '，50字以上",' +
+        '"video_prompt":"動畫咒語：動作+鏡頭+' + S.video + '+' + E + '+vertical 9:16 format，45字以上"}]\n\n' +
+        '按此格式生成 ' + count + ' 個場景（id從' + start + '到' + end + '）';
+
+      var raw2 = await callGemini(p2);
+      var scenes = JSON.parse(raw2);
+      allScenes = allScenes.concat(scenes);
+    }
+
+    part1.scenes = allScenes;
+    renderAll(part1, S);
+
+  } catch(e) {
+    document.getElementById('results').innerHTML = '<div style="padding:40px;text-align:center;color:var(--coral);background:var(--bg2);border-radius:16px;border:1px solid var(--border);">生成失敗，請再試一次<br><small style="color:var(--text3);font-size:11px;">' + e.message + '</small></div>';
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = '<span>&#x2736;</span> 重新開拍';
+  document.getElementById('prog').style.display = 'none';
+}
+
+function renderAll(data, S) {
+  var results = document.getElementById('results');
+  results.innerHTML = '';
+  results.style.display = 'flex';
+  results.style.flexDirection = 'column';
+  results.style.gap = '24px';
+
+  // Block 1
+  var b1 = makeBlock('n1','01','分鏡圖片咒語','Gemini 生圖用 ／ 靜態圖片');
+  var sb = el('div','story-box'); sb.textContent = data.enhanced_story;
+  b1.appendChild(sb);
+  var dn = el('div','dir-note');
+  dn.innerHTML = '🎬 ' + data.director_vision + (data.music_suggestion ? '<br>🎵 ' + data.music_suggestion : '');
+  b1.appendChild(dn);
+  var w1 = el('div','scenes-wrap');
+  data.scenes.forEach(function(sc,i){ w1.appendChild(makeSceneCard(sc,i,sc.image_prompt + ", vertical 9:16 format, portrait orientation, single scene only, no frame, no border, no title, no text overlay, no comic panel layout, no multiple panels, no caption, no watermark, no label, no subtitle, full bleed image, clean pure image",null,false)); });
+  b1.appendChild(w1);
+  results.appendChild(b1);
+
+  // Block 2
+  var b2 = makeBlock('n2','02','分鏡動畫咒語','Grok Image-to-Video ／ 讓圖動起來');
+  var w2 = el('div','scenes-wrap');
+  data.scenes.forEach(function(sc,i){ w2.appendChild(makeSceneCard(sc,i,sc.video_prompt,'var(--teal)',true)); });
+  b2.appendChild(w2);
+  results.appendChild(b2);
+
+  // Block 3
+  var b3 = makeBlock('n3','03','角色圖片咒語','Gemini 生成角色參考圖用');
+  var cg = el('div','chars-grid');
+  data.characters.forEach(function(ch){
+    var card = el('div','char-card');
+    var rl = el('div','char-role'); rl.textContent = ch.role + ' ／ ' + ch.age;
+    var nm = el('div','char-name'); nm.textContent = ch.name;
+    var ds = el('div','char-desc');
+    ds.innerHTML = ch.appearance + '<br><span style="color:var(--text3);font-size:10px;">' + ch.personality + '</span>';
+    var lb = el('div','sc-alabel'); lb.textContent = '角色生圖咒語'; lb.style.marginBottom='6px';
+    card.appendChild(rl); card.appendChild(nm); card.appendChild(ds);
+    card.appendChild(lb); card.appendChild(makePBox(ch.image_prompt + ', vertical 9:16 format, portrait orientation, single scene only, no frame, no border, no title, no text overlay, no comic panel layout, no multiple panels, no caption, no watermark, no label, no subtitle, full bleed image, clean pure image','var(--coral)'));
+    cg.appendChild(card);
+  });
+  b3.appendChild(cg);
+  results.appendChild(b3);
+
+  // Block 4
+  var b4 = makeBlock('n4','04','整體畫風鎖定咒語','每次生圖都貼在最後');
+  var si = el('div','style-inner');
+  var st = el('div','style-tags');
+  var t1=el('span','stag'); t1.textContent=S.name; t1.style.background='rgba(136,120,216,0.15)'; t1.style.color='var(--purple)';
+  var t2=el('span','stag'); t2.textContent='角色一致性'; t2.style.background='rgba(104,184,104,0.12)'; t2.style.color='var(--green)';
+  var t3=el('span','stag'); t3.textContent='統一色調'; t3.style.background='rgba(61,189,181,0.12)'; t3.style.color='var(--teal)';
+  st.appendChild(t1); st.appendChild(t2); st.appendChild(t3);
+  si.appendChild(st);
+  si.appendChild(makePBox(data.style_prompt,'var(--purple)'));
+  b4.appendChild(si);
+  results.appendChild(b4);
+
+  // scroll to results
+  results.scrollIntoView({behavior:'smooth'});
+}
+
+// ── 儲存系統 ──
+var SAVE_KEY = 'storyboard_saves';
+var currentData = null;
+var currentStyle = null;
+
+function getSaves() {
+  try { return JSON.parse(localStorage.getItem(SAVE_KEY) || '[]'); } catch(e) { return []; }
+}
+
+function putSaves(arr) {
+  localStorage.setItem(SAVE_KEY, JSON.stringify(arr));
+}
+
+function saveCurrentData() {
+  if (!currentData) { alert('請先生成分鏡！'); return; }
+  var title = prompt('請輸入儲存名稱：', currentData.enhanced_story.substring(0,20) + '...');
+  if (!title) return;
+  var saves = getSaves();
+  saves.unshift({
+    id: Date.now(),
+    title: title,
+    date: new Date().toLocaleString('zh-TW'),
+    data: currentData,
+    styleKey: document.getElementById('style').value
+  });
+  if (saves.length > 20) saves = saves.slice(0, 20);
+  putSaves(saves);
+  renderSavesList();
+  alert('已儲存！');
+}
+
+function loadSave(id) {
+  var saves = getSaves();
+  var item = saves.find(function(s){ return s.id === id; });
+  if (!item) return;
+  currentData = item.data;
+  currentStyle = STYLES[item.styleKey] || STYLES['pixar'];
+  document.getElementById('style').value = item.styleKey || 'pixar';
+  renderAll(item.data, currentStyle);
+  window.scrollTo({top: document.getElementById('results').offsetTop - 80, behavior: 'smooth'});
+}
+
+function deleteSave(id) {
+  if (!confirm('確定刪除這個分鏡？')) return;
+  var saves = getSaves().filter(function(s){ return s.id !== id; });
+  putSaves(saves);
+  renderSavesList();
+}
+
+function renderSavesList() {
+  var saves = getSaves();
+  var wrap = document.getElementById('saves-wrap');
+  var list = document.getElementById('saves-list');
+  if (saves.length === 0) { wrap.style.display = 'none'; return; }
+  wrap.style.display = 'block';
+  list.innerHTML = '';
+  saves.forEach(function(s) {
+    var item = document.createElement('div');
+    item.className = 'save-item';
+    item.onclick = function(e) { if (e.target.classList.contains('save-del')) return; loadSave(s.id); };
+    var title = document.createElement('div');
+    title.className = 'save-title';
+    title.textContent = s.title;
+    var date = document.createElement('div');
+    date.className = 'save-date';
+    date.textContent = s.date;
+    var del = document.createElement('button');
+    del.className = 'save-del';
+    del.textContent = '刪除';
+    del.onclick = function(){ deleteSave(s.id); };
+    item.appendChild(title);
+    item.appendChild(date);
+    item.appendChild(del);
+    list.appendChild(item);
+  });
+}
+
+// 在 renderAll 結尾加上儲存按鈕
+var _origRenderAll = renderAll;
+renderAll = function(data, S) {
+  currentData = data;
+  currentStyle = S;
+  _origRenderAll(data, S);
+
+  // 加儲存按鈕到結果區
+  var existing = document.getElementById('save-action-bar');
+  if (existing) existing.remove();
+  var bar = document.createElement('div');
+  bar.id = 'save-action-bar';
+  bar.className = 'save-actions';
+  var saveBtn = document.createElement('button');
+  saveBtn.className = 'save-btn';
+  saveBtn.innerHTML = '&#x2713; 儲存這份分鏡';
+  saveBtn.onclick = saveCurrentData;
+  var exportBtn = document.createElement('button');
+  exportBtn.className = 'save-btn';
+  exportBtn.innerHTML = '&#x2193; 匯出 JSON';
+  exportBtn.onclick = exportJSON;
+  bar.appendChild(saveBtn);
+  bar.appendChild(exportBtn);
+  document.getElementById('results').insertBefore(bar, document.getElementById('results').firstChild);
+  renderSavesList();
+};
+
+function exportJSON() {
+  if (!currentData) return;
+  var blob = new Blob([JSON.stringify(currentData, null, 2)], {type:'application/json'});
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'storyboard_' + Date.now() + '.json';
+  a.click();
+}
+
+// 頁面載入時顯示已儲存清單
+window.addEventListener('load', renderSavesList);
+
+</script>
+</body>
+</html>
