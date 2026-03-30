@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>超級導演分鏡系統</title>
+<script src="config.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600&family=DM+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap');
 :root {
@@ -17,6 +18,7 @@
 html, body { height:auto; overflow-y:auto; }
 body { font-family:'Plus Jakarta Sans',sans-serif; background:var(--bg); color:var(--text); }
 
+/* Header */
 .hdr { padding:16px 28px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:14px; background:rgba(10,9,8,0.97); position:sticky; top:0; z-index:100; }
 .logo { width:36px; height:36px; background:linear-gradient(135deg,var(--gold),var(--coral)); border-radius:9px; display:flex; align-items:center; justify-content:center; font-size:17px; flex-shrink:0; }
 .hdr h1 { font-family:'Noto Serif TC',serif; font-size:14px; font-weight:600; }
@@ -26,10 +28,10 @@ body { font-family:'Plus Jakarta Sans',sans-serif; background:var(--bg); color:v
 
 .wrap { max-width:900px; margin:0 auto; padding:28px; display:flex; flex-direction:column; gap:24px; }
 
+/* Input */
 .input-card { background:var(--bg2); border:1px solid var(--border); border-radius:16px; padding:24px; display:flex; flex-direction:column; gap:16px; }
 .flabel { font-size:10px; font-weight:600; letter-spacing:0.1em; text-transform:uppercase; color:var(--text3); margin-bottom:7px; }
 .row2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
-.row3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; }
 textarea, select { width:100%; background:var(--bg3); border:1px solid var(--border); border-radius:10px; padding:11px 13px; color:var(--text); font-family:'Plus Jakarta Sans',sans-serif; font-size:13px; outline:none; transition:border-color 0.2s; line-height:1.6; }
 textarea:focus, select:focus { border-color:var(--gold); background:var(--bg4); }
 textarea::placeholder { color:var(--text3); }
@@ -56,16 +58,25 @@ select option { background:var(--bg3); }
 .block { background:var(--bg2); border:1px solid var(--border); border-radius:16px; overflow:visible; }
 .bhead { padding:14px 18px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:10px; }
 .bnum { font-size:10px; font-weight:700; padding:3px 9px; border-radius:999px; letter-spacing:0.1em; }
-.n1{background:rgba(200,168,75,0.15);color:var(--gold2);}
-.n2{background:rgba(61,189,181,0.15);color:var(--teal);}
-.n3{background:rgba(224,120,96,0.15);color:var(--coral);}
-.n4{background:rgba(136,120,216,0.15);color:var(--purple);}
+.n1{background:rgba(224,120,96,0.15);color:var(--coral);}
+.n2{background:rgba(200,168,75,0.15);color:var(--gold2);}
+.n3{background:rgba(136,120,216,0.15);color:var(--purple);}
 .btitle { font-size:14px; font-weight:500; }
 .bsub { font-size:11px; color:var(--text3); margin-left:auto; }
 
 .story-box { padding:18px 20px; font-family:'Noto Serif TC',serif; font-size:14px; color:var(--text2); line-height:2; border-bottom:1px solid var(--border); }
 .dir-note { margin:12px 20px; padding:12px 14px; background:rgba(200,168,75,0.06); border-left:2px solid var(--gold); border-radius:0 8px 8px 0; font-size:12px; color:var(--gold2); line-height:1.7; font-style:italic; }
 
+/* 角色卡片 */
+.chars-grid { padding:14px; display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:14px; }
+.char-card { background:var(--bg3); border:1px solid var(--border); border-radius:12px; padding:16px; }
+.char-role { font-size:10px; color:var(--text3); margin-bottom:3px; text-transform:uppercase; letter-spacing:0.06em; }
+.char-name { font-size:16px; font-weight:600; color:var(--coral); margin-bottom:6px; }
+.char-desc { font-size:11px; color:var(--text2); line-height:1.7; margin-bottom:12px; }
+.char-selected-img { width:100%; aspect-ratio:9/16; max-height:200px; object-fit:cover; border-radius:8px; border:2px solid var(--green); margin-bottom:8px; cursor:pointer; }
+.char-selected-label { font-size:10px; color:var(--green); text-align:center; margin-bottom:10px; font-weight:600; }
+
+/* 場景卡片 */
 .scenes-wrap { padding:14px; display:flex; flex-direction:column; gap:12px; }
 .sc-card { background:var(--bg3); border:1px solid var(--border); border-radius:12px; overflow:visible; }
 .sc-head { padding:11px 15px; display:flex; align-items:center; gap:10px; border-bottom:1px solid var(--border); }
@@ -77,10 +88,11 @@ select option { background:var(--bg3); }
 .sc-caption { padding:9px 15px; font-family:'Noto Serif TC',serif; font-size:13px; color:var(--gold2); border-bottom:1px solid var(--border); font-style:italic; background:rgba(200,168,75,0.04); }
 .sc-action { padding:10px 15px; font-size:12px; color:var(--text2); line-height:1.7; border-bottom:1px solid var(--border); }
 .sc-alabel { font-size:9px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--text3); margin-bottom:4px; }
+.sc-chars-tag { padding:8px 15px; border-bottom:1px solid var(--border); display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
+.char-tag { font-size:10px; padding:2px 8px; border-radius:999px; background:rgba(224,120,96,0.15); color:var(--coral); border:1px solid rgba(224,120,96,0.3); }
 .sc-prompt { padding:12px 14px; }
-.plabel { font-size:9px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; margin-bottom:7px; display:flex; align-items:center; gap:5px; flex-wrap:wrap; }
+.plabel { font-size:9px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; margin-bottom:7px; display:flex; align-items:center; gap:5px; }
 .pdot { width:5px; height:5px; border-radius:50%; flex-shrink:0; }
-.cam-tag { font-size:9px; padding:1px 6px; border-radius:4px; font-family:'DM Mono',monospace; }
 
 .pbox { font-family:'DM Mono',monospace; font-size:11px; color:var(--text2); line-height:1.7; background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:11px 80px 11px 12px; cursor:pointer; transition:border-color 0.15s; position:relative; word-break:break-word; white-space:pre-wrap; }
 .pbox:hover { border-color:var(--gold); background:rgba(200,168,75,0.03); }
@@ -89,34 +101,11 @@ select option { background:var(--bg3); }
 .pbox.copied { border-color:var(--green) !important; }
 .pbox.copied .pbox-hint { color:var(--green) !important; border-color:var(--green); }
 
-.chars-grid { padding:14px; display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:12px; }
-.char-card { background:var(--bg3); border:1px solid var(--border); border-radius:12px; padding:14px; }
-.char-role { font-size:10px; color:var(--text3); margin-bottom:3px; text-transform:uppercase; letter-spacing:0.06em; }
-.char-name { font-size:15px; font-weight:600; color:var(--coral); margin-bottom:8px; }
-.char-desc { font-size:11px; color:var(--text2); line-height:1.7; margin-bottom:10px; }
-
-.style-inner { padding:16px 18px; }
-.style-tags { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px; }
-.stag { font-size:10px; padding:2px 8px; border-radius:999px; font-weight:500; }
-
-::-webkit-scrollbar { width:4px; }
-.save-item { background:var(--bg3); border:1px solid var(--border); border-radius:8px; padding:10px 14px; display:flex; align-items:center; gap:10px; cursor:pointer; transition:border-color 0.15s; }
-.save-item:hover { border-color:var(--gold); }
-.save-title { flex:1; font-size:13px; color:var(--text); font-weight:500; }
-.save-date { font-size:10px; color:var(--text3); }
-.save-del { font-size:11px; color:var(--text3); padding:3px 8px; border-radius:6px; border:1px solid var(--border); background:none; cursor:pointer; font-family:inherit; transition:all 0.15s; }
-.save-del:hover { color:var(--coral); border-color:var(--coral); }
-.save-actions { display:flex; gap:8px; margin-top:12px; }
-.save-btn { flex:1; background:var(--bg3); border:1px solid var(--border); border-radius:8px; padding:9px; color:var(--text2); font-size:12px; font-weight:500; cursor:pointer; font-family:inherit; transition:all 0.15s; display:flex; align-items:center; justify-content:center; gap:6px; }
-.save-btn:hover { border-color:var(--gold); color:var(--gold); }
-::-webkit-scrollbar-thumb { background:var(--border2); border-radius:2px; }
-
-/* Image Generation */
-.img-gen-wrap { padding:12px 14px; border-top:1px solid var(--border); background:rgba(0,0,0,0.15); }
+/* 生圖區塊 */
+.img-gen-wrap { padding:12px 14px; border-top:1px solid var(--border); background:rgba(0,0,0,0.12); }
 .img-gen-header { display:flex; align-items:center; gap:8px; margin-bottom:10px; flex-wrap:wrap; }
 .img-gen-title { font-size:10px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--text3); }
-.model-select { background:var(--bg3); border:1px solid var(--border); border-radius:6px; padding:4px 8px; color:var(--text2); font-size:11px; font-family:inherit; outline:none; cursor:pointer; flex:1; min-width:160px; }
-.img-gen-btn { background:rgba(200,168,75,0.15); border:1px solid var(--gold); border-radius:6px; padding:5px 12px; color:var(--gold2); font-size:11px; font-weight:600; cursor:pointer; font-family:inherit; transition:all 0.15s; white-space:nowrap; }
+.img-gen-btn { background:rgba(200,168,75,0.15); border:1px solid var(--gold); border-radius:6px; padding:5px 12px; color:var(--gold2); font-size:11px; font-weight:600; cursor:pointer; font-family:inherit; transition:all 0.15s; }
 .img-gen-btn:hover { background:rgba(200,168,75,0.25); }
 .img-gen-btn:disabled { opacity:0.4; cursor:not-allowed; }
 .img-refresh-btn { background:rgba(61,189,181,0.12); border:1px solid var(--teal); border-radius:6px; padding:5px 10px; color:var(--teal); font-size:11px; cursor:pointer; font-family:inherit; transition:all 0.15s; }
@@ -129,18 +118,42 @@ select option { background:var(--bg3); }
 .img-item { position:relative; aspect-ratio:9/16; background:var(--bg3); border:1px solid var(--border); border-radius:8px; overflow:hidden; cursor:pointer; transition:border-color 0.15s; }
 .img-item:hover { border-color:var(--gold); }
 .img-item img { width:100%; height:100%; object-fit:cover; }
-.img-item .img-overlay { position:absolute; inset:0; background:rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center; opacity:0; transition:opacity 0.15s; }
+.img-item .img-overlay { position:absolute; inset:0; background:rgba(0,0,0,0.55); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; opacity:0; transition:opacity 0.15s; padding:8px; }
 .img-item:hover .img-overlay { opacity:1; }
-.img-overlay-text { color:white; font-size:10px; font-weight:600; }
+.img-overlay-btn { color:white; font-size:10px; font-weight:600; background:rgba(0,0,0,0.5); padding:3px 8px; border-radius:4px; border:1px solid rgba(255,255,255,0.3); cursor:pointer; text-align:center; width:100%; }
+.img-overlay-btn.select-btn { background:rgba(200,168,75,0.4); border-color:var(--gold); color:var(--gold2); }
 .img-placeholder { width:100%; height:100%; display:flex; align-items:center; justify-content:center; color:var(--text3); font-size:10px; flex-direction:column; gap:4px; }
 .img-placeholder-icon { font-size:20px; opacity:0.3; }
 .img-error { color:var(--coral); font-size:10px; text-align:center; padding:8px; }
+.img-item.selected-ref { border-color:var(--green) !important; border-width:2px; }
+
+/* 警示步驟 */
+.step-hint { padding:12px 16px; background:rgba(200,168,75,0.08); border:1px solid rgba(200,168,75,0.3); border-radius:10px; font-size:12px; color:var(--gold2); display:flex; align-items:center; gap:8px; }
+
+/* Style */
+.style-inner { padding:16px 18px; }
+.style-tags { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px; }
+.stag { font-size:10px; padding:2px 8px; border-radius:999px; font-weight:500; }
+
+/* Saves */
+.save-item { background:var(--bg3); border:1px solid var(--border); border-radius:8px; padding:10px 14px; display:flex; align-items:center; gap:10px; cursor:pointer; transition:border-color 0.15s; }
+.save-item:hover { border-color:var(--gold); }
+.save-title { flex:1; font-size:13px; color:var(--text); font-weight:500; }
+.save-date { font-size:10px; color:var(--text3); }
+.save-del { font-size:11px; color:var(--text3); padding:3px 8px; border-radius:6px; border:1px solid var(--border); background:none; cursor:pointer; font-family:inherit; transition:all 0.15s; }
+.save-del:hover { color:var(--coral); border-color:var(--coral); }
+.save-actions { display:flex; gap:8px; margin-top:12px; }
+.save-btn { flex:1; background:var(--bg3); border:1px solid var(--border); border-radius:8px; padding:9px; color:var(--text2); font-size:12px; font-weight:500; cursor:pointer; font-family:inherit; transition:all 0.15s; display:flex; align-items:center; justify-content:center; gap:6px; }
+.save-btn:hover { border-color:var(--gold); color:var(--gold); }
 
 /* Lightbox */
-.lightbox { position:fixed; inset:0; background:rgba(0,0,0,0.9); z-index:999; display:none; align-items:center; justify-content:center; }
+.lightbox { position:fixed; inset:0; background:rgba(0,0,0,0.92); z-index:999; display:none; align-items:center; justify-content:center; }
 .lightbox.open { display:flex; }
 .lightbox img { max-width:90vw; max-height:90vh; object-fit:contain; border-radius:8px; }
-.lightbox-close { position:fixed; top:16px; right:20px; color:white; font-size:24px; cursor:pointer; background:none; border:none; line-height:1; }
+.lightbox-close { position:fixed; top:16px; right:20px; color:white; font-size:28px; cursor:pointer; background:none; border:none; }
+
+::-webkit-scrollbar { width:4px; }
+::-webkit-scrollbar-thumb { background:var(--border2); border-radius:2px; }
 </style>
 </head>
 <body>
@@ -149,27 +162,27 @@ select option { background:var(--bg3); }
   <div class="logo">🎬</div>
   <div>
     <h1>超級導演分鏡系統</h1>
-    <p>AI 專業分鏡 × 運鏡設計 × 咒語生成</p>
+    <p>AI 專業分鏡 × 角色一致性 × 圖片生成</p>
   </div>
   <div class="ldot"></div>
 </div>
 
 <div class="wrap">
 
+  <!-- 輸入區 -->
   <div class="input-card">
     <div>
       <div class="flabel">故事描述</div>
       <textarea id="story" rows="5" placeholder="用幾句話說你的故事，AI 會補充細節並拆成專業分鏡。
 
-例如：一個叫小花的女孩，家境貧困，每天走一小時山路上學。NPO 志工來到村子，送她書包和文具。小花感動落淚，從此更努力讀書，夢想成為老師。"></textarea>
+例如：一隻叫小福的米克斯狗狗，跟著主人阿明在城市裡生活。有一天阿明生病住院，小福獨自守在門口等待，感動了整個社區。"></textarea>
     </div>
-
     <div>
       <div class="flabel">場景數量</div>
       <div class="cnt-grid">
         <button class="cnt" onclick="setN(this,6)">6</button>
-        <button class="cnt" onclick="setN(this,8)">8</button>
-        <button class="cnt on" onclick="setN(this,10)">10</button>
+        <button class="cnt on" onclick="setN(this,8)">8</button>
+        <button class="cnt" onclick="setN(this,10)">10</button>
         <button class="cnt" onclick="setN(this,12)">12</button>
         <button class="cnt" onclick="setN(this,15)">15</button>
         <button class="cnt" onclick="setN(this,18)">18</button>
@@ -187,6 +200,7 @@ select option { background:var(--bg3); }
           <option value="watercolor">水彩童書風</option>
           <option value="korean">韓系療癒動畫</option>
           <option value="cartoon">手繪卡通風</option>
+          <option value="realistic">寫實風格</option>
         </select>
       </div>
       <div>
@@ -207,7 +221,6 @@ select option { background:var(--bg3); }
     <button class="gen-btn" id="gen-btn" onclick="generate()">
       <span>✦</span> 超級導演，開拍！
     </button>
-
     <div id="saves-wrap" style="display:none;">
       <div class="flabel" style="margin-bottom:8px;">已儲存的分鏡</div>
       <div id="saves-list" style="display:flex;flex-direction:column;gap:6px;"></div>
@@ -215,21 +228,30 @@ select option { background:var(--bg3); }
   </div>
 
   <div id="results"></div>
-
 </div>
 
-<script src="config.js"></script>
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+  <button class="lightbox-close" onclick="closeLightbox()">&#x2715;</button>
+  <img id="lightbox-img" src="" alt="">
+</div>
+
 <script>
-var N = 10;
+var N = 8;
 var GEMINI_KEY = (typeof CONFIG !== "undefined") ? CONFIG.GEMINI_API_KEY : "";
+var GEMINI_KEY_PAID = (typeof CONFIG !== "undefined" && CONFIG.GEMINI_API_KEY_PAID) ? CONFIG.GEMINI_API_KEY_PAID : "";
+
+// 角色參考圖存儲（角色名 → base64圖片）
+var selectedCharImages = {};
 
 var STYLES = {
-  pixar:      {name:"皮克斯動畫",   base:"Pixar 3D animation style, subsurface scattering skin, expressive character design, soft cinematic lighting, vibrant warm colors, high detail, consistent art style, emotional depth",   video:"Pixar 3D smooth character motion, expressive micro-animations, cinematic depth of field, warm color grading"},
-  ghibli:     {name:"宮崎駿吉卜力", base:"Studio Ghibli anime style, hand-drawn watercolor texture, soft earthy colors, gentle brush strokes, warm natural lighting, whimsical atmosphere, 2D cel shading",                          video:"Ghibli fluid animation, gentle wind movement, hand-drawn motion, soft watercolor transitions"},
-  anime:      {name:"日系溫馨動畫", base:"Japanese anime style, pastel soft colors, clean line art, soft cel shading, warm golden light, heartwarming slice-of-life, consistent character design",                                    video:"Japanese anime smooth animation, soft pastel motion blur, gentle character expressions"},
-  watercolor: {name:"水彩童書風",   base:"watercolor children book illustration, soft brush texture, dreamy pastel palette, hand-painted look, gentle ink outlines, storybook aesthetic",                                            video:"watercolor paint animation, gentle brush stroke motion, dreamy color bloom, storybook floating camera"},
-  korean:     {name:"韓系療癒動畫", base:"Korean webtoon animation style, clean lines, soft muted colors, cute rounded characters, cozy healing atmosphere, minimalist backgrounds",                                                 video:"Korean webtoon smooth animation, minimal motion, soft color transitions, cozy intimate camera"},
-  cartoon:    {name:"手繪卡通風",   base:"2D hand-drawn cartoon animation, warm flat colors, expressive simple characters, clean bold outlines, cheerful wholesome aesthetic",                                                       video:"2D cartoon squash-and-stretch animation, bouncy character movement, warm flat color motion"}
+  pixar:      {name:"皮克斯動畫",   base:"Pixar 3D animation style, subsurface scattering skin, expressive character design, soft cinematic lighting, vibrant warm colors, high detail, consistent art style, emotional depth"},
+  ghibli:     {name:"宮崎駿吉卜力", base:"Studio Ghibli anime style, hand-drawn watercolor texture, soft earthy colors, gentle brush strokes, warm natural lighting, whimsical atmosphere, 2D cel shading"},
+  anime:      {name:"日系溫馨動畫", base:"Japanese anime style, pastel soft colors, clean line art, soft cel shading, warm golden light, heartwarming slice-of-life, consistent character design"},
+  watercolor: {name:"水彩童書風",   base:"watercolor children book illustration, soft brush texture, dreamy pastel palette, hand-painted look, gentle ink outlines, storybook aesthetic"},
+  korean:     {name:"韓系療癒動畫", base:"Korean webtoon animation style, clean lines, soft muted colors, cute rounded characters, cozy healing atmosphere, minimalist backgrounds"},
+  cartoon:    {name:"手繪卡通風",   base:"2D hand-drawn cartoon animation, warm flat colors, expressive simple characters, clean bold outlines, cheerful wholesome aesthetic"},
+  realistic:  {name:"寫實風格",     base:"photorealistic, cinematic photography, 8K ultra detailed, real skin texture, natural lighting, sharp focus, DSLR photo quality, lifelike, hyperrealistic"}
 };
 
 var EMOTIONS = {
@@ -250,6 +272,8 @@ var COLORS = [
   {bg:"rgba(216,104,168,0.15)", c:"#d868a8"},
   {bg:"rgba(200,200,75,0.15)",  c:"#c8c84b"}
 ];
+
+var NO_TEXT_SUFFIX = ", vertical 9:16 format, portrait orientation, single scene only, no frame, no border, no title, no text overlay, no comic panel layout, no multiple panels, no caption, no watermark, no label, no subtitle, full bleed image, clean pure image";
 
 function setN(btn, n) {
   N = n;
@@ -280,77 +304,19 @@ function makePBox(text, accentColor) {
   return box;
 }
 
-function makeBlock(numCls, numTxt, title, sub) {
-  var b = el('div', 'block');
-  var h = el('div', 'bhead');
-  var n = el('span', 'bnum ' + numCls); n.textContent = numTxt;
-  var t = el('span', 'btitle'); t.textContent = title;
-  var s = el('span', 'bsub'); s.textContent = sub;
-  h.appendChild(n); h.appendChild(t); h.appendChild(s);
-  b.appendChild(h);
-  return b;
+function openLightbox(src) {
+  document.getElementById("lightbox-img").src = src;
+  document.getElementById("lightbox").classList.add("open");
+}
+function closeLightbox() {
+  document.getElementById("lightbox").classList.remove("open");
 }
 
-function makeSceneCard(sc, i, promptText, promptColor, isVideo) {
-  var col = COLORS[i % COLORS.length];
-  var card = el('div', 'sc-card');
-
-  var head = el('div', 'sc-head');
-  var num = el('div', 'sc-num');
-  num.style.background = col.bg; num.style.color = col.c;
-  num.textContent = sc.id;
-  var meta = el('div', 'sc-meta');
-  var name = el('div', 'sc-name');
-  name.style.color = col.c; name.textContent = sc.name;
-  var info = el('div', 'sc-info');
-  info.textContent = (sc.location||'') + (sc.lighting ? ' ／ ' + sc.lighting : '');
-  meta.appendChild(name); meta.appendChild(info);
-  var badge = el('span', 'sc-badge'); badge.textContent = sc.time;
-  head.appendChild(num); head.appendChild(meta); head.appendChild(badge);
-  card.appendChild(head);
-
-  var cap = el('div', 'sc-caption');
-  cap.textContent = '\u201c' + sc.caption + '\u201d';
-  card.appendChild(cap);
-
-  var act = el('div', 'sc-action');
-  var al = el('div', 'sc-alabel');
-  al.textContent = isVideo ? '運鏡 ／ 場景動作' : '場景動作';
-  var at = el('div');
-  at.textContent = isVideo ? (sc.camera_zh||'') + ' ／ ' + (sc.action||'') : (sc.action||'');
-  act.appendChild(al); act.appendChild(at);
-  card.appendChild(act);
-
-  var pw = el('div', 'sc-prompt');
-  var pl = el('div', 'plabel');
-  var pd = el('div', 'pdot');
-  pd.style.background = promptColor || 'var(--gold)';
-  var pt = el('span');
-  pt.style.color = promptColor || 'var(--gold2)';
-  pt.textContent = isVideo ? '動畫動作咒語' : '靜態圖片咒語';
-  pl.appendChild(pd); pl.appendChild(pt);
-  if (isVideo && sc.camera_zh) {
-    var ct = el('span', 'cam-tag');
-    ct.style.background = 'rgba(61,189,181,0.15)';
-    ct.style.color = 'var(--teal)';
-    ct.textContent = sc.camera_zh;
-    pl.appendChild(ct);
-  }
-  pw.appendChild(pl);
-  pw.appendChild(makePBox(promptText, promptColor));
-  card.appendChild(pw);
-
-  // 只在圖片咒語區塊（block 01）加入生圖功能
-  if (!isVideo) {
-    card.appendChild(makeImgGenBlock(promptText));
-  }
-
-  return card;
-}
-
+// ── Gemini 文字生成 ──
 async function callGemini(prompt) {
+  var key = GEMINI_KEY;
   var res = await fetch(
-    "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + GEMINI_KEY,
+    "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + key,
     {
       method: "POST",
       headers: {"Content-Type": "application/json"},
@@ -365,12 +331,180 @@ async function callGemini(prompt) {
   return data.candidates[0].content.parts[0].text.replace(/```json|```/g,'').trim();
 }
 
+// ── Gemini Flash 圖片生成 ──
+async function generateImageGemini(prompt) {
+  var key = GEMINI_KEY_PAID || GEMINI_KEY;
+  try {
+    var res = await fetch(
+      "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-preview-image-generation:generateContent?key=" + key,
+      {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+          contents: [{parts: [{text: prompt}]}],
+          generationConfig: {
+            responseModalities: ["TEXT", "IMAGE"]
+          }
+        })
+      }
+    );
+    var data = await res.json();
+    if (data.error) {
+      console.error("Gemini Flash image error:", data.error);
+      if (data.error.code === 429 || data.error.code === 402) {
+        return "QUOTA_EXCEEDED";
+      }
+      return null;
+    }
+    // 從回應中找圖片
+    if (data.candidates && data.candidates[0] && data.candidates[0].content) {
+      var parts = data.candidates[0].content.parts;
+      for (var i = 0; i < parts.length; i++) {
+        if (parts[i].inlineData && parts[i].inlineData.data) {
+          var mimeType = parts[i].inlineData.mimeType || "image/png";
+          return "data:" + mimeType + ";base64," + parts[i].inlineData.data;
+        }
+      }
+    }
+    return null;
+  } catch(e) {
+    console.error("Gemini Flash image error:", e);
+    return null;
+  }
+}
+
+// ── HF 後端生圖（備用）──
+async function generateImageHF(prompt) {
+  try {
+    var res = await fetch("http://127.0.0.1:8001/generate", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({prompt: prompt, model_key: "black-forest-labs/FLUX.1-schnell", seed: Math.floor(Math.random()*9999)})
+    });
+    if (!res.ok) return null;
+    var data = await res.json();
+    return data.image;
+  } catch(e) {
+    return null;
+  }
+}
+
+// ── 統一生圖入口（先 HF，失敗用 Gemini）──
+async function generateImage(prompt) {
+  var url = await generateImageHF(prompt);
+  if (url) return url;
+  return await generateImageGemini(prompt);
+}
+
+// ── 生成 4 張圖 ──
+async function generateFourImages(prompt, wrap, onSelectImage) {
+  var genBtn = wrap.querySelector(".img-gen-btn");
+  var refreshBtn = wrap.querySelector(".img-refresh-btn");
+  var progWrap = wrap.querySelector(".img-prog-wrap");
+  var progText = wrap.querySelector(".img-prog-text");
+  var grid = wrap.querySelector(".img-grid");
+
+  genBtn.disabled = true;
+  if (refreshBtn) refreshBtn.disabled = true;
+  progWrap.style.display = "block";
+  progText.textContent = "生成中，請稍候...";
+  grid.innerHTML = "";
+
+  for (var i = 0; i < 4; i++) {
+    var ph = document.createElement("div");
+    ph.className = "img-item";
+    ph.innerHTML = '<div class="img-placeholder"><div class="img-placeholder-icon">&#x29BE;</div><div>生成中...</div></div>';
+    grid.appendChild(ph);
+  }
+
+  var completed = 0;
+  for (var idx = 0; idx < 4; idx++) {
+    (function(index) {
+      generateImage(prompt + ", variation " + (index+1)).then(function(url) {
+        completed++;
+        progText.textContent = "已完成 " + completed + " / 4 張...";
+        var items = grid.querySelectorAll(".img-item");
+        if (items[index]) {
+          if (url === "QUOTA_EXCEEDED") {
+            items[index].innerHTML = '<div class="img-placeholder"><div class="img-error">今日額度用完，明天再試</div></div>';
+          } else if (url) {
+            items[index].innerHTML = '';
+            var img = document.createElement("img");
+            img.src = url;
+            var overlay = el('div', 'img-overlay');
+            var enlargeBtn = el('div', 'img-overlay-btn');
+            enlargeBtn.textContent = '🔍 放大';
+            enlargeBtn.onclick = function(e){ e.stopPropagation(); openLightbox(url); };
+            overlay.appendChild(enlargeBtn);
+            if (onSelectImage) {
+              var selectBtn = el('div', 'img-overlay-btn select-btn');
+              selectBtn.textContent = '✓ 設為角色參考';
+              selectBtn.onclick = function(e){
+                e.stopPropagation();
+                onSelectImage(url);
+                // 標記選中
+                grid.querySelectorAll('.img-item').forEach(function(it){ it.classList.remove('selected-ref'); });
+                items[index].classList.add('selected-ref');
+              };
+              overlay.appendChild(selectBtn);
+            }
+            items[index].appendChild(img);
+            items[index].appendChild(overlay);
+          } else {
+            items[index].innerHTML = '<div class="img-placeholder"><div class="img-error">生成失敗，請刷新</div></div>';
+          }
+        }
+        if (completed === 4) {
+          genBtn.disabled = false;
+          if (refreshBtn) refreshBtn.disabled = false;
+          progWrap.style.display = "none";
+        }
+      });
+    })(idx);
+  }
+}
+
+// ── 建立生圖區塊 ──
+function makeImgBlock(prompt, onSelectImage) {
+  var wrap = el('div', 'img-gen-wrap');
+  var header = el('div', 'img-gen-header');
+  var title = el('span', 'img-gen-title');
+  title.textContent = onSelectImage ? "生成角色參考圖" : "生成分鏡圖片";
+  var genBtn = el('button', 'img-gen-btn');
+  genBtn.textContent = "✦ 生成";
+  var refreshBtn = el('button', 'img-refresh-btn');
+  refreshBtn.textContent = "↻ 刷新";
+  header.appendChild(title);
+  header.appendChild(genBtn);
+  header.appendChild(refreshBtn);
+
+  var progWrap = el('div', 'img-prog-wrap');
+  var progBar = el('div', 'img-prog-bar');
+  progBar.appendChild(el('div', 'img-prog-fill'));
+  var progText = el('div', 'img-prog-text');
+  progText.textContent = "生成中...";
+  progWrap.appendChild(progBar);
+  progWrap.appendChild(progText);
+
+  var grid = el('div', 'img-grid');
+  wrap.appendChild(header);
+  wrap.appendChild(progWrap);
+  wrap.appendChild(grid);
+
+  genBtn.onclick = function() { generateFourImages(prompt, wrap, onSelectImage); };
+  refreshBtn.onclick = function() { generateFourImages(prompt, wrap, onSelectImage); };
+  return wrap;
+}
+
+// ── Gemini 文字呼叫 ──
 async function generate() {
   var story = document.getElementById('story').value.trim();
-  var chars = '';
   var styleKey = document.getElementById('style').value;
   var emotionKey = document.getElementById('emotion').value;
   if (!story) { alert('請先輸入故事！'); return; }
+
+  // 重置角色參考圖
+  selectedCharImages = {};
 
   var btn = document.getElementById('gen-btn');
   btn.disabled = true;
@@ -383,56 +517,58 @@ async function generate() {
 
   try {
     document.getElementById('prog-text').textContent = '第一步：規劃故事與角色...';
-
-    var p1 = "你是動畫導演兼 AI 提示詞專家。只輸出 JSON，不要任何其他文字。\n\n" +
-      "故事：" + story + "\n動畫風格：" + S.name + "\n風格描述：" + S.base + "\n情緒：" + E + "\n\n" +
-      "請自動從故事中找出所有角色（主角和配角都要），為每人設計完整外觀和生圖咒語。\n\n" +
-      '{' +
-      '"enhanced_story":"美化故事（繁中150字內）",' +
+    var p1 = "你是動畫導演兼AI提示詞專家。只輸出JSON，不要其他文字。\n\n" +
+      "故事：" + story + "\n動畫風格：" + S.name + "\n風格：" + S.base + "\n情緒：" + E + "\n\n" +
+      "請自動從故事找出所有角色，為每人設計外觀和生圖咒語。\n\n" +
+      '{"enhanced_story":"美化故事（繁中150字內）",' +
       '"director_vision":"導演理念（繁中40字內）",' +
       '"music_suggestion":"音樂建議（繁中15字內）",' +
       '"style_prompt":"畫風咒語（英文）：' + S.base + '+' + E + '+consistent character design+unified color grading，70字以上",' +
-      '"characters":[{' +
-      '"name":"角色名（從故事自動找出）",' +
-      '"role":"角色身份",' +
-      '"age":"年齡",' +
-      '"appearance":"完整外觀（繁中）：髮型+臉型+膚色+服裝+體型+特徵",' +
-      '"personality":"個性（繁中）",' +
-      '"image_prompt":"角色全身正面參考圖英文咒語：詳細外觀+服裝+' + S.base + '+white background+character design sheet+full body front view+single character only+no text+no watermark+no frame+no border+no title+no label+clean image，60字以上"' +
-      '}]' +
-      '，請依故事自動列出所有角色}';
+      '"characters":[{"name":"角色名","role":"身份","age":"年齡","appearance":"完整外觀（繁中）","personality":"個性（繁中）",' +
+      '"image_prompt":"角色全身正面參考圖英文咒語：詳細外觀+服裝+' + S.base + '+white background+character design sheet+full body front view+single character only+no text+no watermark+no frame+no border+no title+no label+clean image，60字以上",' +
+      '"scenes_appear":["出現在哪些場景id，例如:[1,3,5]"]}],' +
+      '"scenes":[{"id":1,"name":"場景名4字內","time":"0-5秒","location":"地點繁中","caption":"字幕10字內繁中",' +
+      '"action":"動作25字內繁中","lighting":"光線繁中","emotion_note":"情感繁中",' +
+      '"characters_in_scene":["出現在這個場景的角色名稱列表"],' +
+      '"image_prompt":"靜態圖英文咒語：場景+角色+光線+' + S.base + '+' + E + '，50字以上"}],' +
+      '"style_prompt_final":"整體畫風咒語（英文）80字以上"}';
 
     var raw1 = await callGemini(p1);
     var part1 = JSON.parse(raw1);
 
-    var allScenes = [];
-    var batchSize = 5;
-    var batches = Math.ceil(N / batchSize);
+    // 分批生成場景（每批5個）
+    if (!part1.scenes || part1.scenes.length < N) {
+      var allScenes = part1.scenes || [];
+      var batchSize = 5;
+      var batches = Math.ceil(N / batchSize);
+      var existingCount = allScenes.length;
 
-    for (var b = 0; b < batches; b++) {
-      var start = b * batchSize + 1;
-      var end = Math.min((b+1)*batchSize, N);
-      var count = end - start + 1;
-      document.getElementById('prog-text').textContent = '生成分鏡 ' + start + '-' + end + ' / ' + N + '...';
+      for (var b = 0; b < batches; b++) {
+        var start = b * batchSize + 1;
+        var end = Math.min((b+1)*batchSize, N);
+        if (start <= existingCount) continue;
+        var count = end - start + 1;
+        document.getElementById('prog-text').textContent = '生成分鏡 ' + start + '-' + end + ' / ' + N + '...';
 
-      var p2 = "只輸出 JSON 陣列，不要其他文字。\n" +
-        "故事：" + part1.enhanced_story + "\n風格：" + S.name + " - " + S.base + "\n情緒：" + E + "\n" +
-        "總場景 " + N + " 個，生成第 " + start + " 到第 " + end + " 個。每個場景時間從 " + ((start-1)*5) + " 秒開始，每段5秒。\n\n" +
-        '[{"id":' + start + ',"name":"場景名4字內","time":"' + ((start-1)*5) + '-' + (start*5) + '秒",' +
-        '"location":"地點10字內繁中","caption":"字幕10字內繁中","action":"動作25字內繁中",' +
-        '"camera_zh":"運鏡8字內繁中","camera_en":"camera movement","lighting":"光線8字內繁中",' +
-        '"emotion_note":"情感12字內繁中",' +
-        '"image_prompt":"靜態圖英文咒語：場景+角色+光線+' + S.base + '+' + E + '，50字以上",' +
-        '"video_prompt":"動畫咒語：動作+鏡頭+' + S.video + '+' + E + '+vertical 9:16 format，45字以上"}]\n\n' +
-        '按此格式生成 ' + count + ' 個場景（id從' + start + '到' + end + '）';
+        var p2 = "只輸出JSON陣列，不要其他文字。\n" +
+          "故事：" + part1.enhanced_story + "\n風格：" + S.name + "\n情緒：" + E + "\n" +
+          "角色列表：" + part1.characters.map(function(c){return c.name;}).join('、') + "\n" +
+          "總場景 " + N + " 個，生成第 " + start + " 到第 " + end + " 個。\n\n" +
+          '[{"id":' + start + ',"name":"場景名4字內","time":"' + ((start-1)*5) + '-' + (start*5) + '秒",' +
+          '"location":"地點繁中","caption":"字幕10字內繁中","action":"動作25字內繁中",' +
+          '"lighting":"光線繁中","emotion_note":"情感繁中",' +
+          '"characters_in_scene":["出現在這個場景的角色名稱"],' +
+          '"image_prompt":"靜態圖英文咒語：場景+角色+光線+' + S.base + '+' + E + '，50字以上"}]\n' +
+          '按此格式生成 ' + count + ' 個場景（id從' + start + '到' + end + '）';
 
-      var raw2 = await callGemini(p2);
-      var scenes = JSON.parse(raw2);
-      allScenes = allScenes.concat(scenes);
+        var raw2 = await callGemini(p2);
+        var scenes = JSON.parse(raw2);
+        allScenes = allScenes.concat(scenes);
+      }
+      part1.scenes = allScenes;
     }
 
-    part1.scenes = allScenes;
-    renderAll(part1, S);
+    renderAll(part1, S, styleKey);
 
   } catch(e) {
     document.getElementById('results').innerHTML = '<div style="padding:40px;text-align:center;color:var(--coral);background:var(--bg2);border-radius:16px;border:1px solid var(--border);">生成失敗，請再試一次<br><small style="color:var(--text3);font-size:11px;">' + e.message + '</small></div>';
@@ -443,234 +579,207 @@ async function generate() {
   document.getElementById('prog').style.display = 'none';
 }
 
-function renderAll(data, S) {
+function renderAll(data, S, styleKey) {
   var results = document.getElementById('results');
   results.innerHTML = '';
-  results.style.display = 'flex';
-  results.style.flexDirection = 'column';
-  results.style.gap = '24px';
+  results.style.cssText = 'display:flex;flex-direction:column;gap:24px;';
+  currentData = data; currentStyle = S;
 
-  // Block 1
-  var b1 = makeBlock('n1','01','分鏡圖片咒語','Gemini 生圖用 ／ 靜態圖片');
-  var sb = el('div','story-box'); sb.textContent = data.enhanced_story;
-  b1.appendChild(sb);
-  var dn = el('div','dir-note');
-  dn.innerHTML = '🎬 ' + data.director_vision + (data.music_suggestion ? '<br>🎵 ' + data.music_suggestion : '');
-  b1.appendChild(dn);
-  var w1 = el('div','scenes-wrap');
-  data.scenes.forEach(function(sc,i){ w1.appendChild(makeSceneCard(sc,i,sc.image_prompt + ", vertical 9:16 format, portrait orientation, single scene only, no frame, no border, no title, no text overlay, no comic panel layout, no multiple panels, no caption, no watermark, no label, no subtitle, full bleed image, clean pure image",null,false)); });
-  b1.appendChild(w1);
+  // ── 步驟提示 ──
+  var hint = el('div', 'step-hint');
+  hint.innerHTML = '📋 <strong>製作流程：</strong> ① 先在下方生成角色參考圖並選定 → ② 再生成每個分鏡圖片（會自動帶入角色）';
+  results.appendChild(hint);
+
+  // ── 01 角色參考圖 ──
+  var b1 = el('div', 'block');
+  var h1 = el('div', 'bhead');
+  var n1 = el('span', 'bnum n1'); n1.textContent = '01';
+  var t1 = el('span', 'btitle'); t1.textContent = '角色參考圖';
+  var s1 = el('span', 'bsub'); s1.textContent = '先生成角色，選定後才能生成場景';
+  h1.appendChild(n1); h1.appendChild(t1); h1.appendChild(s1);
+  b1.appendChild(h1);
+
+  var storyBox = el('div', 'story-box'); storyBox.textContent = data.enhanced_story;
+  b1.appendChild(storyBox);
+  var dirNote = el('div', 'dir-note');
+  dirNote.innerHTML = '🎬 ' + data.director_vision + (data.music_suggestion ? '<br>🎵 ' + data.music_suggestion : '');
+  b1.appendChild(dirNote);
+
+  var cg = el('div', 'chars-grid');
+  data.characters.forEach(function(ch) {
+    var card = el('div', 'char-card');
+    var rl = el('div', 'char-role'); rl.textContent = ch.role + ' ／ ' + ch.age;
+    var nm = el('div', 'char-name'); nm.textContent = ch.name;
+    var ds = el('div', 'char-desc');
+    ds.innerHTML = ch.appearance + '<br><span style="color:var(--text3);font-size:10px;">' + (ch.personality||'') + '</span>';
+    card.appendChild(rl); card.appendChild(nm); card.appendChild(ds);
+
+    // 如果已選定，顯示選定圖
+    if (selectedCharImages[ch.name]) {
+      var selImg = document.createElement("img");
+      selImg.src = selectedCharImages[ch.name];
+      selImg.className = "char-selected-img";
+      selImg.onclick = function(){ openLightbox(selectedCharImages[ch.name]); };
+      var selLabel = el('div', 'char-selected-label');
+      selLabel.textContent = '✓ 已選定角色參考圖';
+      card.appendChild(selImg);
+      card.appendChild(selLabel);
+    }
+
+    var charPrompt = ch.image_prompt + NO_TEXT_SUFFIX;
+    var imgBlock = makeImgBlock(charPrompt, function(url) {
+      selectedCharImages[ch.name] = url;
+      // 更新顯示
+      renderAll(data, S, styleKey);
+      document.getElementById('results').scrollIntoView({behavior:'smooth'});
+    });
+    card.appendChild(imgBlock);
+    cg.appendChild(card);
+  });
+  b1.appendChild(cg);
   results.appendChild(b1);
 
-  // Block 2
-  var b2 = makeBlock('n2','02','分鏡動畫咒語','Grok Image-to-Video ／ 讓圖動起來');
-  var w2 = el('div','scenes-wrap');
-  data.scenes.forEach(function(sc,i){ w2.appendChild(makeSceneCard(sc,i,sc.video_prompt,'var(--teal)',true)); });
+  // ── 02 分鏡圖片 ──
+  var b2 = el('div', 'block');
+  var h2 = el('div', 'bhead');
+  var n2 = el('span', 'bnum n2'); n2.textContent = '02';
+  var t2 = el('span', 'btitle'); t2.textContent = '分鏡圖片生成';
+  var s2 = el('span', 'bsub'); s2.textContent = '每個場景自動帶入角色參考圖';
+  h2.appendChild(n2); h2.appendChild(t2); h2.appendChild(s2);
+  b2.appendChild(h2);
+
+  var w2 = el('div', 'scenes-wrap');
+  data.scenes.forEach(function(sc, i) {
+    var col = COLORS[i % COLORS.length];
+    var card = el('div', 'sc-card');
+
+    var head = el('div', 'sc-head');
+    var num = el('div', 'sc-num');
+    num.style.background = col.bg; num.style.color = col.c;
+    num.textContent = sc.id;
+    var meta = el('div', 'sc-meta');
+    var name = el('div', 'sc-name'); name.style.color = col.c; name.textContent = sc.name;
+    var info = el('div', 'sc-info'); info.textContent = (sc.location||'') + (sc.lighting ? ' ／ ' + sc.lighting : '');
+    meta.appendChild(name); meta.appendChild(info);
+    var badge = el('span', 'sc-badge'); badge.textContent = sc.time;
+    head.appendChild(num); head.appendChild(meta); head.appendChild(badge);
+    card.appendChild(head);
+
+    var cap = el('div', 'sc-caption');
+    cap.textContent = '\u201c' + sc.caption + '\u201d';
+    card.appendChild(cap);
+
+    var act = el('div', 'sc-action');
+    var al = el('div', 'sc-alabel'); al.textContent = '場景動作';
+    var at = el('div'); at.textContent = sc.action || '';
+    act.appendChild(al); act.appendChild(at);
+    card.appendChild(act);
+
+    // 顯示出現的角色
+    if (sc.characters_in_scene && sc.characters_in_scene.length > 0) {
+      var ctRow = el('div', 'sc-chars-tag');
+      var ctLabel = el('span', 'sc-alabel'); ctLabel.textContent = '出現角色：';
+      ctRow.appendChild(ctLabel);
+      sc.characters_in_scene.forEach(function(charName) {
+        var tag = el('span', 'char-tag'); tag.textContent = charName;
+        // 如果該角色有選定參考圖，顯示綠色
+        if (selectedCharImages[charName]) {
+          tag.style.background = 'rgba(104,184,104,0.15)';
+          tag.style.color = 'var(--green)';
+          tag.style.borderColor = 'rgba(104,184,104,0.3)';
+          tag.textContent = '✓ ' + charName;
+        }
+        ctRow.appendChild(tag);
+      });
+      card.appendChild(ctRow);
+    }
+
+    // 生圖咒語
+    var pw = el('div', 'sc-prompt');
+    var pl = el('div', 'plabel');
+    var pd = el('div', 'pdot'); pd.style.background = 'var(--gold)';
+    var pt = el('span'); pt.style.color = 'var(--gold2)'; pt.textContent = '靜態圖片咒語';
+    pl.appendChild(pd); pl.appendChild(pt);
+    pw.appendChild(pl);
+
+    var fullPrompt = sc.image_prompt + NO_TEXT_SUFFIX;
+    pw.appendChild(makePBox(fullPrompt, null));
+    card.appendChild(pw);
+
+    // 生圖區塊（帶入角色參考圖）
+    var scenePrompt = buildScenePrompt(sc, fullPrompt);
+    card.appendChild(makeImgBlock(scenePrompt, null));
+
+    w2.appendChild(card);
+  });
   b2.appendChild(w2);
   results.appendChild(b2);
 
-  // Block 3
-  var b3 = makeBlock('n3','03','角色圖片咒語','Gemini 生成角色參考圖用');
-  var cg = el('div','chars-grid');
-  data.characters.forEach(function(ch){
-    var card = el('div','char-card');
-    var rl = el('div','char-role'); rl.textContent = ch.role + ' ／ ' + ch.age;
-    var nm = el('div','char-name'); nm.textContent = ch.name;
-    var ds = el('div','char-desc');
-    ds.innerHTML = ch.appearance + '<br><span style="color:var(--text3);font-size:10px;">' + ch.personality + '</span>';
-    var lb = el('div','sc-alabel'); lb.textContent = '角色生圖咒語'; lb.style.marginBottom='6px';
-    card.appendChild(rl); card.appendChild(nm); card.appendChild(ds);
-    card.appendChild(lb); card.appendChild(makePBox(ch.image_prompt + ', vertical 9:16 format, portrait orientation, single scene only, no frame, no border, no title, no text overlay, no comic panel layout, no multiple panels, no caption, no watermark, no label, no subtitle, full bleed image, clean pure image','var(--coral)'));
-    cg.appendChild(card);
-  });
-  b3.appendChild(cg);
+  // ── 03 畫風咒語 ──
+  var b3 = el('div', 'block');
+  var h3 = el('div', 'bhead');
+  var n3 = el('span', 'bnum n3'); n3.textContent = '03';
+  var t3 = el('span', 'btitle'); t3.textContent = '整體畫風鎖定咒語';
+  var s3 = el('span', 'bsub'); s3.textContent = '每次生圖都貼在最後';
+  h3.appendChild(n3); h3.appendChild(t3); h3.appendChild(s3);
+  b3.appendChild(h3);
+  var si = el('div', 'style-inner');
+  var st = el('div', 'style-tags');
+  var t1s=el('span','stag'); t1s.textContent=S.name; t1s.style.background='rgba(136,120,216,0.15)'; t1s.style.color='var(--purple)';
+  var t2s=el('span','stag'); t2s.textContent='角色一致性'; t2s.style.background='rgba(104,184,104,0.12)'; t2s.style.color='var(--green)';
+  st.appendChild(t1s); st.appendChild(t2s);
+  si.appendChild(st);
+  si.appendChild(makePBox(data.style_prompt || data.style_prompt_final || '', 'var(--purple)'));
+  b3.appendChild(si);
   results.appendChild(b3);
 
-  // Block 4
-  var b4 = makeBlock('n4','04','整體畫風鎖定咒語','每次生圖都貼在最後');
-  var si = el('div','style-inner');
-  var st = el('div','style-tags');
-  var t1=el('span','stag'); t1.textContent=S.name; t1.style.background='rgba(136,120,216,0.15)'; t1.style.color='var(--purple)';
-  var t2=el('span','stag'); t2.textContent='角色一致性'; t2.style.background='rgba(104,184,104,0.12)'; t2.style.color='var(--green)';
-  var t3=el('span','stag'); t3.textContent='統一色調'; t3.style.background='rgba(61,189,181,0.12)'; t3.style.color='var(--teal)';
-  st.appendChild(t1); st.appendChild(t2); st.appendChild(t3);
-  si.appendChild(st);
-  si.appendChild(makePBox(data.style_prompt,'var(--purple)'));
-  b4.appendChild(si);
-  results.appendChild(b4);
+  // 儲存按鈕
+  var bar = el('div', 'save-actions');
+  var saveBtn = el('button', 'save-btn');
+  saveBtn.innerHTML = '&#x2713; 儲存這份分鏡';
+  saveBtn.onclick = saveCurrentData;
+  var exportBtn = el('button', 'save-btn');
+  exportBtn.innerHTML = '&#x2193; 匯出 JSON';
+  exportBtn.onclick = exportJSON;
+  bar.appendChild(saveBtn); bar.appendChild(exportBtn);
+  results.insertBefore(bar, results.firstChild);
 
-  // scroll to results
+  renderSavesList();
   results.scrollIntoView({behavior:'smooth'});
 }
 
-
-// ── Hugging Face 生圖系統 ──
-var HF_TOKEN = (typeof CONFIG !== "undefined") ? CONFIG.HF_TOKEN : "";
-
-var MODELS = {
-  "flux-schnell":   { id:"black-forest-labs/FLUX.1-schnell",              name:"FLUX Schnell（最快）" },
-  "sdxl":           { id:"stabilityai/stable-diffusion-xl-base-1.0",       name:"SDXL（動畫細膩）" },
-  "realistic":      { id:"SG161222/Realistic_Vision_V6.0_B1_noVAE",        name:"Realistic Vision（寫實）" },
-  "epicrealism":    { id:"emilianJR/epiCRealism",                          name:"epiCRealism（電影感）" },
-  "openjourney":    { id:"prompthero/openjourney",                         name:"Openjourney（MJ風格）" },
-  "dreamlike":      { id:"dreamlike-art/dreamlike-photoreal-2.0",          name:"Dreamlike（夢幻寫實）" }
-};
-
-function openLightbox(src) {
-  document.getElementById("lightbox-img").src = src;
-  document.getElementById("lightbox").classList.add("open");
-}
-
-function closeLightbox() {
-  document.getElementById("lightbox").classList.remove("open");
-}
-
-async function generateImages(prompt, container) {
-  var modelKey = container.querySelector(".model-select").value;
-  var model = MODELS[modelKey];
-  var btn = container.querySelector(".img-gen-btn");
-  var refreshBtn = container.querySelector(".img-refresh-btn");
-  var progWrap = container.querySelector(".img-prog-wrap");
-  var progText = container.querySelector(".img-prog-text");
-  var grid = container.querySelector(".img-grid");
-
-  btn.disabled = true;
-  if (refreshBtn) refreshBtn.disabled = true;
-  progWrap.style.display = "block";
-  progText.textContent = "生成中，請稍候...";
-
-  // Reset grid
-  grid.innerHTML = "";
-  for (var i = 0; i < 4; i++) {
-    var ph = document.createElement("div");
-    ph.className = "img-item";
-    ph.innerHTML = '<div class="img-placeholder"><div class="img-placeholder-icon">&#x29BE;</div><div>生成中...</div></div>';
-    grid.appendChild(ph);
-  }
-
-  // Generate 4 images with different seeds
-  var seeds = [42, 123, 456, 789];
-  var promises = seeds.map(function(seed, idx) {
-    return generateSingleImage(prompt, model.id, seed).then(function(url) {
-      var items = grid.querySelectorAll(".img-item");
-      if (items[idx]) {
-        if (url) {
-          items[idx].innerHTML = '<img src="' + url + '" alt="分鏡圖片"><div class="img-overlay"><span class="img-overlay-text">點擊放大</span></div>';
-          items[idx].onclick = function(){ openLightbox(url); };
-        } else {
-          items[idx].innerHTML = '<div class="img-placeholder"><div class="img-error">生成失敗，請刷新</div></div>';
-        }
+// 建立場景生圖咒語（帶入角色描述）
+function buildScenePrompt(sc, basePrompt) {
+  var charDescs = [];
+  if (sc.characters_in_scene) {
+    sc.characters_in_scene.forEach(function(name) {
+      if (selectedCharImages[name]) {
+        charDescs.push("with character " + name + " matching the reference design");
       }
-      progText.textContent = "已完成 " + (idx+1) + " / 4 張...";
     });
-  });
-
-  await Promise.all(promises);
-
-  btn.disabled = false;
-  if (refreshBtn) refreshBtn.disabled = false;
-  progWrap.style.display = "none";
-}
-
-async function generateSingleImage(prompt, modelKey, seed) {
-  try {
-    var res = await fetch("http://127.0.0.1:8001/generate", {
-      method: "POST",
-      headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({prompt: prompt, model_key: modelKey, seed: seed})
-    });
-    if (!res.ok) return null;
-    var data = await res.json();
-    return data.image;
-  } catch(e) {
-    console.error("generateSingleImage error:", e);
-    return null;
   }
-}
-
-function makeImgGenBlock(promptText) {
-  var wrap = document.createElement("div");
-  wrap.className = "img-gen-wrap";
-
-  var header = document.createElement("div");
-  header.className = "img-gen-header";
-
-  var title = document.createElement("span");
-  title.className = "img-gen-title";
-  title.textContent = "生成圖片";
-
-  var select = document.createElement("select");
-  select.className = "model-select";
-  Object.keys(MODELS).forEach(function(key) {
-    var opt = document.createElement("option");
-    opt.value = key;
-    opt.textContent = MODELS[key].name;
-    select.appendChild(opt);
-  });
-
-  var genBtn = document.createElement("button");
-  genBtn.className = "img-gen-btn";
-  genBtn.textContent = "✦ 生成";
-  genBtn.onclick = function() { generateImages(promptText, wrap); };
-
-  var refreshBtn = document.createElement("button");
-  refreshBtn.className = "img-refresh-btn";
-  refreshBtn.textContent = "↻ 刷新";
-  refreshBtn.onclick = function() { generateImages(promptText, wrap); };
-
-  header.appendChild(title);
-  header.appendChild(select);
-  header.appendChild(genBtn);
-  header.appendChild(refreshBtn);
-
-  var progWrap = document.createElement("div");
-  progWrap.className = "img-prog-wrap";
-  var progBar = document.createElement("div");
-  progBar.className = "img-prog-bar";
-  var progFill = document.createElement("div");
-  progFill.className = "img-prog-fill";
-  progBar.appendChild(progFill);
-  var progText = document.createElement("div");
-  progText.className = "img-prog-text";
-  progText.textContent = "生成中...";
-  progWrap.appendChild(progBar);
-  progWrap.appendChild(progText);
-
-  var grid = document.createElement("div");
-  grid.className = "img-grid";
-
-  wrap.appendChild(header);
-  wrap.appendChild(progWrap);
-  wrap.appendChild(grid);
-  return wrap;
+  if (charDescs.length > 0) {
+    return basePrompt + ", " + charDescs.join(", ");
+  }
+  return basePrompt;
 }
 
 // ── 儲存系統 ──
 var SAVE_KEY = 'storyboard_saves';
-var currentData = null;
-var currentStyle = null;
+var currentData = null; var currentStyle = null;
 
 function getSaves() {
   try { return JSON.parse(localStorage.getItem(SAVE_KEY) || '[]'); } catch(e) { return []; }
 }
-
-function putSaves(arr) {
-  localStorage.setItem(SAVE_KEY, JSON.stringify(arr));
-}
+function putSaves(arr) { localStorage.setItem(SAVE_KEY, JSON.stringify(arr)); }
 
 function saveCurrentData() {
   if (!currentData) { alert('請先生成分鏡！'); return; }
   var title = prompt('請輸入儲存名稱：', currentData.enhanced_story.substring(0,20) + '...');
   if (!title) return;
   var saves = getSaves();
-  saves.unshift({
-    id: Date.now(),
-    title: title,
-    date: new Date().toLocaleString('zh-TW'),
-    data: currentData,
-    styleKey: document.getElementById('style').value
-  });
-  if (saves.length > 20) saves = saves.slice(0, 20);
+  saves.unshift({id:Date.now(), title:title, date:new Date().toLocaleString('zh-TW'), data:currentData, styleKey:document.getElementById('style').value});
+  if (saves.length > 20) saves = saves.slice(0,20);
   putSaves(saves);
   renderSavesList();
   alert('已儲存！');
@@ -683,14 +792,12 @@ function loadSave(id) {
   currentData = item.data;
   currentStyle = STYLES[item.styleKey] || STYLES['pixar'];
   document.getElementById('style').value = item.styleKey || 'pixar';
-  renderAll(item.data, currentStyle);
-  window.scrollTo({top: document.getElementById('results').offsetTop - 80, behavior: 'smooth'});
+  renderAll(item.data, currentStyle, item.styleKey || 'pixar');
 }
 
 function deleteSave(id) {
-  if (!confirm('確定刪除這個分鏡？')) return;
-  var saves = getSaves().filter(function(s){ return s.id !== id; });
-  putSaves(saves);
+  if (!confirm('確定刪除？')) return;
+  putSaves(getSaves().filter(function(s){ return s.id !== id; }));
   renderSavesList();
 }
 
@@ -702,52 +809,16 @@ function renderSavesList() {
   wrap.style.display = 'block';
   list.innerHTML = '';
   saves.forEach(function(s) {
-    var item = document.createElement('div');
-    item.className = 'save-item';
-    item.onclick = function(e) { if (e.target.classList.contains('save-del')) return; loadSave(s.id); };
-    var title = document.createElement('div');
-    title.className = 'save-title';
-    title.textContent = s.title;
-    var date = document.createElement('div');
-    date.className = 'save-date';
-    date.textContent = s.date;
-    var del = document.createElement('button');
-    del.className = 'save-del';
-    del.textContent = '刪除';
+    var item = el('div', 'save-item');
+    item.onclick = function(e){ if (e.target.classList.contains('save-del')) return; loadSave(s.id); };
+    var title = el('div', 'save-title'); title.textContent = s.title;
+    var date = el('div', 'save-date'); date.textContent = s.date;
+    var del = el('button', 'save-del'); del.textContent = '刪除';
     del.onclick = function(){ deleteSave(s.id); };
-    item.appendChild(title);
-    item.appendChild(date);
-    item.appendChild(del);
+    item.appendChild(title); item.appendChild(date); item.appendChild(del);
     list.appendChild(item);
   });
 }
-
-// 在 renderAll 結尾加上儲存按鈕
-var _origRenderAll = renderAll;
-renderAll = function(data, S) {
-  currentData = data;
-  currentStyle = S;
-  _origRenderAll(data, S);
-
-  // 加儲存按鈕到結果區
-  var existing = document.getElementById('save-action-bar');
-  if (existing) existing.remove();
-  var bar = document.createElement('div');
-  bar.id = 'save-action-bar';
-  bar.className = 'save-actions';
-  var saveBtn = document.createElement('button');
-  saveBtn.className = 'save-btn';
-  saveBtn.innerHTML = '&#x2713; 儲存這份分鏡';
-  saveBtn.onclick = saveCurrentData;
-  var exportBtn = document.createElement('button');
-  exportBtn.className = 'save-btn';
-  exportBtn.innerHTML = '&#x2193; 匯出 JSON';
-  exportBtn.onclick = exportJSON;
-  bar.appendChild(saveBtn);
-  bar.appendChild(exportBtn);
-  document.getElementById('results').insertBefore(bar, document.getElementById('results').firstChild);
-  renderSavesList();
-};
 
 function exportJSON() {
   if (!currentData) return;
@@ -758,16 +829,7 @@ function exportJSON() {
   a.click();
 }
 
-// 頁面載入時顯示已儲存清單
 window.addEventListener('load', renderSavesList);
-
 </script>
-
-<!-- Lightbox -->
-<div class="lightbox" id="lightbox" onclick="closeLightbox()">
-  <button class="lightbox-close" onclick="closeLightbox()">&#x2715;</button>
-  <img id="lightbox-img" src="" alt="">
-</div>
-
 </body>
 </html>
