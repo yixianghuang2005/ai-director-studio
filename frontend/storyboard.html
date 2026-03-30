@@ -110,6 +110,37 @@ select option { background:var(--bg3); }
 .save-btn { flex:1; background:var(--bg3); border:1px solid var(--border); border-radius:8px; padding:9px; color:var(--text2); font-size:12px; font-weight:500; cursor:pointer; font-family:inherit; transition:all 0.15s; display:flex; align-items:center; justify-content:center; gap:6px; }
 .save-btn:hover { border-color:var(--gold); color:var(--gold); }
 ::-webkit-scrollbar-thumb { background:var(--border2); border-radius:2px; }
+
+/* Image Generation */
+.img-gen-wrap { padding:12px 14px; border-top:1px solid var(--border); background:rgba(0,0,0,0.15); }
+.img-gen-header { display:flex; align-items:center; gap:8px; margin-bottom:10px; flex-wrap:wrap; }
+.img-gen-title { font-size:10px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--text3); }
+.model-select { background:var(--bg3); border:1px solid var(--border); border-radius:6px; padding:4px 8px; color:var(--text2); font-size:11px; font-family:inherit; outline:none; cursor:pointer; flex:1; min-width:160px; }
+.img-gen-btn { background:rgba(200,168,75,0.15); border:1px solid var(--gold); border-radius:6px; padding:5px 12px; color:var(--gold2); font-size:11px; font-weight:600; cursor:pointer; font-family:inherit; transition:all 0.15s; white-space:nowrap; }
+.img-gen-btn:hover { background:rgba(200,168,75,0.25); }
+.img-gen-btn:disabled { opacity:0.4; cursor:not-allowed; }
+.img-refresh-btn { background:rgba(61,189,181,0.12); border:1px solid var(--teal); border-radius:6px; padding:5px 10px; color:var(--teal); font-size:11px; cursor:pointer; font-family:inherit; transition:all 0.15s; }
+.img-refresh-btn:hover { background:rgba(61,189,181,0.22); }
+.img-prog-wrap { margin-bottom:10px; display:none; }
+.img-prog-bar { height:2px; background:var(--border); border-radius:1px; overflow:hidden; margin-bottom:4px; }
+.img-prog-fill { height:100%; background:linear-gradient(90deg,var(--gold),var(--teal)); animation:sl 1.4s linear infinite; width:40%; border-radius:1px; }
+.img-prog-text { font-size:10px; color:var(--text3); text-align:center; }
+.img-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
+.img-item { position:relative; aspect-ratio:9/16; background:var(--bg3); border:1px solid var(--border); border-radius:8px; overflow:hidden; cursor:pointer; transition:border-color 0.15s; }
+.img-item:hover { border-color:var(--gold); }
+.img-item img { width:100%; height:100%; object-fit:cover; }
+.img-item .img-overlay { position:absolute; inset:0; background:rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center; opacity:0; transition:opacity 0.15s; }
+.img-item:hover .img-overlay { opacity:1; }
+.img-overlay-text { color:white; font-size:10px; font-weight:600; }
+.img-placeholder { width:100%; height:100%; display:flex; align-items:center; justify-content:center; color:var(--text3); font-size:10px; flex-direction:column; gap:4px; }
+.img-placeholder-icon { font-size:20px; opacity:0.3; }
+.img-error { color:var(--coral); font-size:10px; text-align:center; padding:8px; }
+
+/* Lightbox */
+.lightbox { position:fixed; inset:0; background:rgba(0,0,0,0.9); z-index:999; display:none; align-items:center; justify-content:center; }
+.lightbox.open { display:flex; }
+.lightbox img { max-width:90vw; max-height:90vh; object-fit:contain; border-radius:8px; }
+.lightbox-close { position:fixed; top:16px; right:20px; color:white; font-size:24px; cursor:pointer; background:none; border:none; line-height:1; }
 </style>
 </head>
 <body>
@@ -187,9 +218,10 @@ select option { background:var(--bg3); }
 
 </div>
 
+<script src="config.js"></script>
 <script>
 var N = 10;
-var GEMINI_KEY = "AIzaSyDw2BW7KUhPsQ7gR08dfa5j0zL_WZ8N_uc";
+var GEMINI_KEY = (typeof CONFIG !== "undefined") ? CONFIG.GEMINI_API_KEY : "";
 
 var STYLES = {
   pixar:      {name:"皮克斯動畫",   base:"Pixar 3D animation style, subsurface scattering skin, expressive character design, soft cinematic lighting, vibrant warm colors, high detail, consistent art style, emotional depth",   video:"Pixar 3D smooth character motion, expressive micro-animations, cinematic depth of field, warm color grading"},
@@ -307,6 +339,12 @@ function makeSceneCard(sc, i, promptText, promptColor, isVideo) {
   pw.appendChild(pl);
   pw.appendChild(makePBox(promptText, promptColor));
   card.appendChild(pw);
+
+  // 只在圖片咒語區塊（block 01）加入生圖功能
+  if (!isVideo) {
+    card.appendChild(makeImgGenBlock(promptText));
+  }
+
   return card;
 }
 
@@ -465,6 +503,158 @@ function renderAll(data, S) {
   results.scrollIntoView({behavior:'smooth'});
 }
 
+
+// ── Hugging Face 生圖系統 ──
+var HF_TOKEN = (typeof CONFIG !== "undefined") ? CONFIG.HF_TOKEN : "";
+
+var MODELS = {
+  "flux-schnell":   { id:"black-forest-labs/FLUX.1-schnell",              name:"FLUX Schnell（最快）" },
+  "sdxl":           { id:"stabilityai/stable-diffusion-xl-base-1.0",       name:"SDXL（動畫細膩）" },
+  "realistic":      { id:"SG161222/Realistic_Vision_V6.0_B1_noVAE",        name:"Realistic Vision（寫實）" },
+  "epicrealism":    { id:"emilianJR/epiCRealism",                          name:"epiCRealism（電影感）" },
+  "openjourney":    { id:"prompthero/openjourney",                         name:"Openjourney（MJ風格）" },
+  "dreamlike":      { id:"dreamlike-art/dreamlike-photoreal-2.0",          name:"Dreamlike（夢幻寫實）" }
+};
+
+function openLightbox(src) {
+  document.getElementById("lightbox-img").src = src;
+  document.getElementById("lightbox").classList.add("open");
+}
+
+function closeLightbox() {
+  document.getElementById("lightbox").classList.remove("open");
+}
+
+async function generateImages(prompt, container) {
+  var modelKey = container.querySelector(".model-select").value;
+  var model = MODELS[modelKey];
+  var btn = container.querySelector(".img-gen-btn");
+  var refreshBtn = container.querySelector(".img-refresh-btn");
+  var progWrap = container.querySelector(".img-prog-wrap");
+  var progText = container.querySelector(".img-prog-text");
+  var grid = container.querySelector(".img-grid");
+
+  btn.disabled = true;
+  if (refreshBtn) refreshBtn.disabled = true;
+  progWrap.style.display = "block";
+  progText.textContent = "生成中，請稍候...";
+
+  // Reset grid
+  grid.innerHTML = "";
+  for (var i = 0; i < 4; i++) {
+    var ph = document.createElement("div");
+    ph.className = "img-item";
+    ph.innerHTML = '<div class="img-placeholder"><div class="img-placeholder-icon">&#x29BE;</div><div>生成中...</div></div>';
+    grid.appendChild(ph);
+  }
+
+  // Generate 4 images with different seeds
+  var seeds = [42, 123, 456, 789];
+  var promises = seeds.map(function(seed, idx) {
+    return generateSingleImage(prompt, model.id, seed).then(function(url) {
+      var items = grid.querySelectorAll(".img-item");
+      if (items[idx]) {
+        if (url) {
+          items[idx].innerHTML = '<img src="' + url + '" alt="分鏡圖片"><div class="img-overlay"><span class="img-overlay-text">點擊放大</span></div>';
+          items[idx].onclick = function(){ openLightbox(url); };
+        } else {
+          items[idx].innerHTML = '<div class="img-placeholder"><div class="img-error">生成失敗，請刷新</div></div>';
+        }
+      }
+      progText.textContent = "已完成 " + (idx+1) + " / 4 張...";
+    });
+  });
+
+  await Promise.all(promises);
+
+  btn.disabled = false;
+  if (refreshBtn) refreshBtn.disabled = false;
+  progWrap.style.display = "none";
+}
+
+async function generateSingleImage(prompt, modelId, seed) {
+  try {
+    var body = { inputs: prompt, parameters: { seed: seed, num_inference_steps: 20 } };
+    var res = await fetch("https://api-inference.huggingface.co/models/" + modelId, {
+      method: "POST",
+      headers: {
+        "Authorization": "Bearer " + HF_TOKEN,
+        "Content-Type": "application/json",
+        "x-wait-for-model": "true"
+      },
+      body: JSON.stringify(body)
+    });
+
+    if (!res.ok) {
+      console.error("HF error:", res.status, await res.text());
+      return null;
+    }
+
+    var blob = await res.blob();
+    return URL.createObjectURL(blob);
+  } catch(e) {
+    console.error("generateSingleImage error:", e);
+    return null;
+  }
+}
+
+function makeImgGenBlock(promptText) {
+  var wrap = document.createElement("div");
+  wrap.className = "img-gen-wrap";
+
+  var header = document.createElement("div");
+  header.className = "img-gen-header";
+
+  var title = document.createElement("span");
+  title.className = "img-gen-title";
+  title.textContent = "生成圖片";
+
+  var select = document.createElement("select");
+  select.className = "model-select";
+  Object.keys(MODELS).forEach(function(key) {
+    var opt = document.createElement("option");
+    opt.value = key;
+    opt.textContent = MODELS[key].name;
+    select.appendChild(opt);
+  });
+
+  var genBtn = document.createElement("button");
+  genBtn.className = "img-gen-btn";
+  genBtn.textContent = "✦ 生成";
+  genBtn.onclick = function() { generateImages(promptText, wrap); };
+
+  var refreshBtn = document.createElement("button");
+  refreshBtn.className = "img-refresh-btn";
+  refreshBtn.textContent = "↻ 刷新";
+  refreshBtn.onclick = function() { generateImages(promptText, wrap); };
+
+  header.appendChild(title);
+  header.appendChild(select);
+  header.appendChild(genBtn);
+  header.appendChild(refreshBtn);
+
+  var progWrap = document.createElement("div");
+  progWrap.className = "img-prog-wrap";
+  var progBar = document.createElement("div");
+  progBar.className = "img-prog-bar";
+  var progFill = document.createElement("div");
+  progFill.className = "img-prog-fill";
+  progBar.appendChild(progFill);
+  var progText = document.createElement("div");
+  progText.className = "img-prog-text";
+  progText.textContent = "生成中...";
+  progWrap.appendChild(progBar);
+  progWrap.appendChild(progText);
+
+  var grid = document.createElement("div");
+  grid.className = "img-grid";
+
+  wrap.appendChild(header);
+  wrap.appendChild(progWrap);
+  wrap.appendChild(grid);
+  return wrap;
+}
+
 // ── 儲存系統 ──
 var SAVE_KEY = 'storyboard_saves';
 var currentData = null;
@@ -582,5 +772,12 @@ function exportJSON() {
 window.addEventListener('load', renderSavesList);
 
 </script>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+  <button class="lightbox-close" onclick="closeLightbox()">&#x2715;</button>
+  <img id="lightbox-img" src="" alt="">
+</div>
+
 </body>
 </html>
