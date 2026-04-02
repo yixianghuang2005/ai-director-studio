@@ -52,6 +52,37 @@ async def proxy_image_fallback(request: Request):
         res = await client.post(url, json=body)
     return JSONResponse(res.json(), status_code=res.status_code)
 
+# ── Imagen 3 生圖（9:16 原生支援）──
+@app.post("/api/imagen3/generate")
+async def proxy_imagen3(request: Request):
+    body = await request.json()
+    key = GEMINI_KEY_PAID or GEMINI_KEY
+    url = f"{GEMINI_BASE}/imagen-3.0-generate-002:predict?key={key}"
+    prompt = body.get("prompt", "")
+    imagen_body = {
+        "instances": [{"prompt": prompt}],
+        "parameters": {
+            "sampleCount": 1,
+            "aspectRatio": "9:16",
+            "safetySetting": "block_only_high"
+        }
+    }
+    async with httpx.AsyncClient(timeout=120) as client:
+        res = await client.post(url, json=imagen_body)
+    data = res.json()
+    # 轉換成前端熟悉的格式
+    if "predictions" in data and data["predictions"]:
+        b64 = data["predictions"][0].get("bytesBase64Encoded", "")
+        if b64:
+            return JSONResponse({
+                "candidates": [{
+                    "content": {
+                        "parts": [{"inlineData": {"mimeType": "image/png", "data": b64}}]
+                    }
+                }]
+            })
+    return JSONResponse(data, status_code=res.status_code)
+
 # ── 健康檢查 ──
 @app.get("/")
 def health():

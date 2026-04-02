@@ -725,20 +725,31 @@ function normalizeRefs(refArray){
 }
 
 async function callImagen(prompt,refBase64Array){
-  var key=GEMINI_KEY_PAID||GEMINI_KEY;
-  var parts=[];
   var validRefs=normalizeRefs(refBase64Array);
+
+  // 有參考圖 → 用 Gemini Flash（支援 image-to-image）
+  // 無參考圖 → 用 Imagen 3（品質更好、原生 9:16）
   if(validRefs.length>0){
+    var parts=[];
     validRefs.forEach(function(r){parts.push({inlineData:{mimeType:r.mimeType,data:r.base64}});});
     parts.push({text:"=== REFERENCE IMAGES PROVIDED ===\nThe image(s) above are CHARACTER REFERENCE SHEETS. Study them carefully.\nYou MUST reproduce these characters with EXACT visual fidelity:\n- Same fur/hair color, texture, and pattern\n- Same face shape, eye color, ear shape\n- Same body proportions and size\n- Same distinctive markings or features\n- Same clothing or accessories if any\nDo NOT stylize, alter, or reinterpret the characters. Treat this as a production cel sheet.\n\n=== SCENE ===\n"+prompt});
-  }else{parts.push({text:prompt});}
+    try{
+      var res=await fetch(API_BASE+"/api/gemini/image",
+        {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({contents:[{parts:parts}],generationConfig:{responseModalities:["IMAGE","TEXT"]}})});
+      var data=await res.json();
+      if(data.error){console.error("Gemini ref 模型錯誤:",data.error.message);return await callImagenFallback(prompt,refBase64Array);}
+      return extractImageB64(data)||await callImagenFallback(prompt,refBase64Array);
+    }catch(e){console.error("callImagen ref exception:",e);return await callImagenFallback(prompt,refBase64Array);}
+  }
+
+  // 無參考圖 → Imagen 3
   try{
-    var res=await fetch(API_BASE+"/api/gemini/image",
-      {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({contents:[{parts:parts}],generationConfig:{responseModalities:["IMAGE","TEXT"]}})});
+    var res=await fetch(API_BASE+"/api/imagen3/generate",
+      {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({prompt:prompt})});
     var data=await res.json();
-    if(data.error){console.error("主模型錯誤:",data.error.message);return await callImagenFallback(prompt,refBase64Array);}
-    return extractImageB64(data)||await callImagenFallback(prompt,refBase64Array);
-  }catch(e){console.error("callImagen exception:",e);return await callImagenFallback(prompt,refBase64Array);}
+    if(data.error){console.error("Imagen3 錯誤:",data.error.message);return await callImagenFallback(prompt,[]);}
+    return extractImageB64(data)||await callImagenFallback(prompt,[]);
+  }catch(e){console.error("Imagen3 exception:",e);return await callImagenFallback(prompt,[]);}
 }
 
 async function callImagenFallback(prompt,refBase64Array){
