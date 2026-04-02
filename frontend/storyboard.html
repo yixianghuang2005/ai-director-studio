@@ -734,7 +734,7 @@ async function callImagen(prompt,refBase64Array){
   }else{parts.push({text:prompt});}
   try{
     var res=await fetch(API_BASE+"/api/gemini/image",
-      {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({contents:[{parts:parts}],generationConfig:{responseModalities:["IMAGE","TEXT"],aspectRatio:"9:16"}})});
+      {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({contents:[{parts:parts}],generationConfig:{responseModalities:["IMAGE","TEXT"]}})});
     var data=await res.json();
     if(data.error){console.error("主模型錯誤:",data.error.message);return await callImagenFallback(prompt,refBase64Array);}
     return extractImageB64(data)||await callImagenFallback(prompt,refBase64Array);
@@ -751,7 +751,7 @@ async function callImagenFallback(prompt,refBase64Array){
   }else{parts.push({text:prompt});}
   try{
     var res=await fetch(API_BASE+"/api/gemini/image-fallback",
-      {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({contents:[{parts:parts}],generationConfig:{responseModalities:["IMAGE","TEXT"],aspectRatio:"9:16"}})});
+      {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({contents:[{parts:parts}],generationConfig:{responseModalities:["IMAGE","TEXT"]}})});
     var data=await res.json();
     if(data.error){console.error("備用模型錯誤:",data.error.message);return null;}
     return extractImageB64(data);
