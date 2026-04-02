@@ -1218,7 +1218,13 @@ async function generate(){
   var S=STYLES[styleKey]; var E=EMOTIONS[emotionKey];
   try{
     document.getElementById('prog-text').textContent='規劃故事與角色...';
-    var p1="你是動畫導演兼AI提示詞專家。只輸出JSON，不要其他文字。\n\n"+
+    var p1="你是動畫導演兼AI提示詞專家。只輸出JSON，不要其他文字。\n"+
+      "【姿勢規則】每個場景的image_prompt必須根據action欄位推導自然姿勢：\n"+
+      "走向某人→walking toward, body angled｜哭泣→hunched, shoulders down｜跑→mid-run lean forward｜"+
+      "說話→turned toward listener, gesturing｜等待→sideways, gazing distance｜擁抱→embracing side view｜"+
+      "回頭→turning back three-quarter view｜看→gazing at target head tilted｜坐下→seated natural angle\n"+
+      "FORBIDDEN: default front-facing static pose. 姿勢必須與action一致。\n\n"+
+
       "故事："+story+"\n動畫風格："+S.name+"\n風格："+S.base+"\n情緒："+E+"\n\n"+
       '{"enhanced_story":"美化故事（繁中150字內）","director_vision":"導演理念（繁中40字內）","music_suggestion":"音樂建議（繁中15字內）",'+
       '"style_prompt":"整體畫風咒語（英文）：'+S.base+'+'+E+'+consistent character design+unified color grading，70字以上",'+
