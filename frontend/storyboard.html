@@ -126,8 +126,34 @@ select option{background:var(--bg3);}
 .ov-btn.sel:hover{background:rgba(200,168,75,0.6);}
 .ov-btn.sel.done{background:rgba(104,184,104,0.4);border-color:var(--green);color:var(--green);}
 
+/* ── 來源切換 Tab ── */
+.char-src-tabs{display:flex;width:200px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-top:8px;}
+.char-src-tab{flex:1;padding:7px 4px;font-size:11px;font-weight:600;cursor:pointer;text-align:center;color:var(--text3);border:none;background:none;font-family:inherit;transition:all 0.15s;display:flex;align-items:center;justify-content:center;gap:4px;}
+.char-src-tab:hover{color:var(--text2);}
+.char-src-tab.active.upload-tab{background:rgba(61,189,181,0.12);color:var(--teal);}
+.char-src-tab.active.ai-tab{background:rgba(200,168,75,0.12);color:var(--gold2);}
+.char-src-divider{width:1px;background:var(--border);flex-shrink:0;}
+
+/* 上傳區 */
+.upload-zone{
+  width:200px;border:1.5px dashed var(--border2);border-radius:8px;
+  padding:14px 8px;text-align:center;cursor:pointer;
+  transition:all 0.2s;background:var(--bg3);margin-top:6px;
+}
+.upload-zone:hover,.upload-zone.dragover{border-color:var(--teal);background:rgba(61,189,181,0.07);transform:scale(1.01);}
+.upload-zone-icon{font-size:22px;margin-bottom:5px;opacity:0.45;}
+.upload-zone-text{font-size:11px;color:var(--text2);line-height:1.5;font-weight:500;}
+.upload-zone-sub{font-size:10px;color:var(--text3);margin-top:3px;}
+.upload-reselect{
+  width:200px;display:flex;align-items:center;justify-content:center;gap:6px;
+  padding:7px 10px;background:rgba(61,189,181,0.08);border:1px solid rgba(61,189,181,0.25);
+  border-radius:8px;font-size:11px;color:var(--teal);font-weight:600;
+  cursor:pointer;transition:all 0.15s;margin-top:6px;
+}
+.upload-reselect:hover{background:rgba(61,189,181,0.18);transform:translateY(-1px);}
+
 /* ── 生圖按鈕 ── */
-.img-action-row{display:flex;gap:6px;width:200px;margin-top:8px;}
+.img-action-row{display:flex;gap:6px;width:200px;margin-top:6px;}
 .img-gen-btn{flex:1;background:rgba(200,168,75,0.12);border:1px solid rgba(200,168,75,0.35);border-radius:8px;padding:8px 10px;color:var(--gold2);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:all 0.15s;}
 .img-gen-btn:hover:not(:disabled){background:rgba(200,168,75,0.22);border-color:var(--gold);transform:translateY(-1px);}
 .img-gen-btn:disabled{opacity:0.4;cursor:not-allowed;}
@@ -249,7 +275,7 @@ select option{background:var(--bg3);}
   <div class="logo">🎬</div>
   <div>
     <h1>超級導演分鏡系統</h1>
-    <p>AI 分鏡 × 角色一致性 × Imagen 4.0 生圖</p>
+    <p>AI 分鏡 × 角色一致性 × Gemini 生圖</p>
   </div>
   <div class="ldot"></div>
 </div>
@@ -326,6 +352,7 @@ var GEMINI_KEY_PAID=(typeof CONFIG!=="undefined"&&CONFIG.GEMINI_API_KEY_PAID)?CO
 var selectedCharImages={};
 window.selectedCharImages=selectedCharImages;
 
+
 var STYLES={
   pixar:     {name:"皮克斯動畫",   base:"Pixar 3D animation style, subsurface scattering skin, expressive character design, soft cinematic lighting, vibrant warm colors, high detail, consistent art style, emotional depth"},
   ghibli:    {name:"宮崎駿吉卜力", base:"Studio Ghibli anime style, hand-drawn watercolor texture, soft earthy colors, gentle brush strokes, warm natural lighting, whimsical atmosphere, 2D cel shading"},
@@ -375,145 +402,326 @@ async function callGemini(prompt){
     body:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{maxOutputTokens:8000,temperature:0.8}})
   });
   var data=await res.json();
-  if(data.error)throw new Error(data.error.message);
-  return data.candidates[0].content.parts[0].text.replace(/```json|```/g,'').trim();
+  if(data.error) throw new Error(data.error.message);
+  if(!data.candidates||!data.candidates[0]) throw new Error("API 未回傳候選結果，請稍後再試");
+  var cand=data.candidates[0];
+  if(!cand.content) throw new Error("內容被過濾（finishReason:"+( cand.finishReason||"unknown")+"），請調整故事內容後重試");
+  if(!cand.content.parts||!cand.content.parts[0]) throw new Error("API 回傳結構異常（parts 為空）");
+  return cand.content.parts[0].text.replace(/```json|```/g,'').trim();
+}
+
+
+
+function normalizeRefs(refArray){
+  return (refArray||[]).map(function(r){
+    if(typeof r==='string') return {base64:r, mimeType:'image/png'};
+    return {base64:r.base64||r, mimeType:r.mimeType||'image/jpeg'};
+  }).filter(function(r){return r.base64&&r.base64.length>100;});
 }
 
 async function callImagen(prompt,refBase64Array){
   var key=GEMINI_KEY_PAID||GEMINI_KEY;
   var parts=[];
-  var validRefs=(refBase64Array||[]).filter(function(b64){return b64&&b64.length>100;});
+  var validRefs=normalizeRefs(refBase64Array);
   if(validRefs.length>0){
-    validRefs.forEach(function(b64){parts.push({inlineData:{mimeType:"image/png",data:b64}});});
-    parts.push({text:"Based on the character reference image(s) above, generate a scene: "+prompt});
+    validRefs.forEach(function(r){parts.push({inlineData:{mimeType:r.mimeType,data:r.base64}});});
+    parts.push({text:"=== REFERENCE IMAGES PROVIDED ===\nThe image(s) above are CHARACTER REFERENCE SHEETS. Study them carefully.\nYou MUST reproduce these characters with EXACT visual fidelity:\n- Same fur/hair color, texture, and pattern\n- Same face shape, eye color, ear shape\n- Same body proportions and size\n- Same distinctive markings or features\n- Same clothing or accessories if any\nDo NOT stylize, alter, or reinterpret the characters. Treat this as a production cel sheet.\n\n=== SCENE ===\n"+prompt});
   }else{parts.push({text:prompt});}
   try{
-    var res=await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key="+key,
+    var res=await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-14:generateContent?key="+key,
       {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({contents:[{parts:parts}],generationConfig:{responseModalities:["IMAGE","TEXT"]}})});
     var data=await res.json();
-    if(data.error){console.error("img err:",data.error.message);return await callImagenFallback(prompt,refBase64Array);}
-    if(data.candidates&&data.candidates[0]&&data.candidates[0].content){
-      var ps=data.candidates[0].content.parts;
-      for(var i=0;i<ps.length;i++){if(ps[i].inlineData&&ps[i].inlineData.data)return ps[i].inlineData.data;}
-    }
-    return null;
-  }catch(e){console.error(e);return null;}
+    if(data.error){console.error("主模型錯誤:",data.error.message);return await callImagenFallback(prompt,refBase64Array);}
+    return extractImageB64(data)||await callImagenFallback(prompt,refBase64Array);
+  }catch(e){console.error("callImagen exception:",e);return await callImagenFallback(prompt,refBase64Array);}
 }
 
 async function callImagenFallback(prompt,refBase64Array){
   var key=GEMINI_KEY_PAID||GEMINI_KEY;
   var parts=[];
-  var validRefs=(refBase64Array||[]).filter(function(b64){return b64&&b64.length>100;});
+  var validRefs=normalizeRefs(refBase64Array);
   if(validRefs.length>0){
-    validRefs.forEach(function(b64){parts.push({inlineData:{mimeType:"image/png",data:b64}});});
-    parts.push({text:"Based on the character reference image(s) above, generate a scene: "+prompt});
+    validRefs.forEach(function(r){parts.push({inlineData:{mimeType:r.mimeType,data:r.base64}});});
+    parts.push({text:"=== REFERENCE IMAGES PROVIDED ===\nThe image(s) above are CHARACTER REFERENCE SHEETS. Study them carefully.\nYou MUST reproduce these characters with EXACT visual fidelity:\n- Same fur/hair color, texture, and pattern\n- Same face shape, eye color, ear shape\n- Same body proportions and size\n- Same distinctive markings or features\n- Same clothing or accessories if any\nDo NOT stylize, alter, or reinterpret the characters. Treat this as a production cel sheet.\n\n=== SCENE ===\n"+prompt});
   }else{parts.push({text:prompt});}
   try{
-    var res=await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-image-preview:generateContent?key="+key,
+    var res=await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key="+key,
       {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({contents:[{parts:parts}],generationConfig:{responseModalities:["IMAGE","TEXT"]}})});
     var data=await res.json();
-    if(data.error)return null;
-    if(data.candidates&&data.candidates[0]&&data.candidates[0].content){
-      var ps=data.candidates[0].content.parts;
-      for(var i=0;i<ps.length;i++){if(ps[i].inlineData&&ps[i].inlineData.data)return ps[i].inlineData.data;}
-    }
-    return null;
-  }catch(e){return null;}
+    if(data.error){console.error("備用模型錯誤:",data.error.message);return null;}
+    return extractImageB64(data);
+  }catch(e){console.error("callImagenFallback exception:",e);return null;}
 }
 
-// ── 角色圖元件 ──
+// 安全地從 Gemini 回應中提取第一張圖片的 base64
+function extractImageB64(data){
+  try{
+    if(!data||!data.candidates||!data.candidates.length) return null;
+    var cand=data.candidates[0];
+    if(!cand||!cand.content||!cand.content.parts) return null;
+    var ps=cand.content.parts;
+    for(var i=0;i<ps.length;i++){
+      if(ps[i]&&ps[i].inlineData&&ps[i].inlineData.data) return ps[i].inlineData.data;
+    }
+    return null;
+  }catch(e){console.error("extractImageB64 error:",e);return null;}
+}
+
+// ── 分析上傳圖片，產出角色外觀英文描述 ──
+async function analyzeUploadedImage(b64, mimeType) {
+  var key = GEMINI_KEY_PAID || GEMINI_KEY;
+  if (!key) return '';
+  try {
+    var res = await fetch(
+      "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + key,
+      {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+          contents: [{
+            parts: [
+              { inlineData: { mimeType: mimeType, data: b64 } },
+              { text: "You are a character consistency expert for AI image generation. Analyze this image and output a PRECISE character description to be used as a consistency lock for generating new scenes.\n\nDescribe EXACTLY:\n1. Species/type (e.g. golden retriever, tabby cat, elderly woman)\n2. Body: size, build, body shape\n3. Fur/hair/skin: exact color names (not just 'brown' — say 'warm honey-golden'), texture, pattern, markings\n4. Face: eye color, nose shape, ear type (floppy/upright), distinctive markings\n5. Any unique features (scar, spots, collar, clothing, accessories)\n\nFormat: One dense paragraph, 80-120 words, English only. Be hyper-specific — these details will be injected into every scene prompt to ensure the character looks IDENTICAL across all generated images. Output ONLY the description, no other text." }
+            ]
+          }],
+          generationConfig: { maxOutputTokens: 200, temperature: 0.2 }
+        })
+      }
+    );
+    var data = await res.json();
+    if (data.error) { console.warn("analyzeUploadedImage error:", data.error.message); return ''; }
+    if (!data.candidates || !data.candidates[0] || !data.candidates[0].content) return '';
+    var parts = data.candidates[0].content.parts;
+    for (var i = 0; i < parts.length; i++) {
+      if (parts[i].text) return parts[i].text.trim();
+    }
+    return '';
+  } catch(e) {
+    console.warn("analyzeUploadedImage exception:", e);
+    return '';
+  }
+}
+
+// ── 角色圖元件（支援上傳 + AI 生成）──
 function makeCharImgBox(charName, prompt, onSelect) {
   var wrap = el('div');
-  wrap.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:8px;';
+  wrap.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:0;';
 
+  // ── 圖片展示框 ──
   var frame = el('div','char-img-frame');
   var badge = el('div','char-selected-badge'); badge.textContent='✓ 已選定';
   frame.appendChild(badge);
-
-  var gradient = el('div','img-gradient');
-  var overlay = el('div','img-overlay');
-  frame.appendChild(gradient); frame.appendChild(overlay);
-
   var ph = el('div','char-img-placeholder');
-  ph.innerHTML='<div class="ph-icon">🎨</div><div>點「生成」開始</div>';
+  ph.innerHTML='<div class="ph-icon">🎨</div><div>選擇來源後開始</div>';
   frame.appendChild(ph);
 
-  var curB64 = null;
+  // 存放兩種來源的 base64
+  var uploadedB64 = null;
+  var uploadedMime = 'image/jpeg'; // 上傳圖片的真實 MIME type
+  var uploadedAppearanceEn = ''; // Vision 分析出的外觀描述
+  var generatedB64 = null;
+  var activeTab = 'ai'; // 'upload' | 'ai'
 
-  function renderImage(b64) {
-    curB64 = b64;
-    frame.innerHTML='';
+  function getCurrentB64() {
+    return activeTab === 'upload' ? uploadedB64 : generatedB64;
+  }
+
+  function renderImage(b64, autoSelect) {
+    frame.innerHTML = '';
     frame.appendChild(badge);
-    var img=document.createElement('img'); img.src='data:image/png;base64,'+b64;
-    var g2=el('div','img-gradient');
-    var ov2=el('div','img-overlay');
-
-    var enlargeBtn=el('div','ov-btn'); enlargeBtn.textContent='🔍 放大檢視';
-    enlargeBtn.onclick=function(e){e.stopPropagation();openLightbox('data:image/png;base64,'+b64);};
-
-    var isSelected = selectedCharImages[charName] && selectedCharImages[charName].base64===b64;
-    var selBtn=el('div','ov-btn sel'+(isSelected?' done':''));
-    selBtn.textContent = isSelected ? '✓ 已選定' : '✓ 選為角色參考';
-    selBtn.onclick=function(e){
+    var img = document.createElement('img');
+    img.src = 'data:image/png;base64,' + b64;
+    var g2 = el('div','img-gradient');
+    var ov2 = el('div','img-overlay');
+    var enlargeBtn = el('div','ov-btn');
+    enlargeBtn.textContent = '🔍 放大檢視';
+    enlargeBtn.onclick = function(e){ e.stopPropagation(); openLightbox('data:image/png;base64;' + b64); };
+    enlargeBtn.onclick = function(e){ e.stopPropagation(); openLightbox('data:image/png;base64,' + b64); };
+    var isNowSelected = selectedCharImages[charName] && selectedCharImages[charName].base64 === b64;
+    var selBtn = el('div','ov-btn sel' + (isNowSelected ? ' done' : ''));
+    selBtn.textContent = isNowSelected ? '✓ 已選定為參考' : '✓ 選為角色參考';
+    selBtn.onclick = function(e){
       e.stopPropagation();
-      selectedCharImages[charName]={base64:b64};
-      window.selectedCharImages=selectedCharImages;
+      // 上傳來源帶入真實 mimeType 和 Vision 分析描述；AI 生成固定 png
+      var mime = (activeTab === 'upload' && uploadedMime) ? uploadedMime : 'image/png';
+      var descEn = (activeTab === 'upload') ? uploadedAppearanceEn : '';
+      selectedCharImages[charName] = { base64: b64, mimeType: mime, appearance_en: descEn };
+      window.selectedCharImages = selectedCharImages;
       frame.classList.add('is-selected');
-      selBtn.className='ov-btn sel done'; selBtn.textContent='✓ 已選定';
-      if(onSelect) onSelect(b64);
+      selBtn.className = 'ov-btn sel done';
+      selBtn.textContent = '✓ 已選定為參考';
+      if (onSelect) onSelect(b64);
     };
     ov2.appendChild(enlargeBtn); ov2.appendChild(selBtn);
     frame.appendChild(img); frame.appendChild(g2); frame.appendChild(ov2);
-
-    if(selectedCharImages[charName]&&selectedCharImages[charName].base64===b64){
+    if (isNowSelected || autoSelect) {
       frame.classList.add('is-selected');
+      if (autoSelect && !isNowSelected) {
+        selectedCharImages[charName] = { base64: b64 };
+        window.selectedCharImages = selectedCharImages;
+        if (onSelect) onSelect(b64);
+      }
+    } else {
+      frame.classList.remove('is-selected');
     }
   }
 
-  if(selectedCharImages[charName]) renderImage(selectedCharImages[charName].base64);
+  function showPlaceholder(icon, text, subtext) {
+    frame.innerHTML = '';
+    frame.classList.remove('is-selected');
+    frame.appendChild(badge);
+    var p = el('div','char-img-placeholder');
+    p.innerHTML = '<div class="ph-icon">' + icon + '</div><div>' + text + '</div>' + (subtext ? '<div style="font-size:10px;opacity:0.5;margin-top:2px;">' + subtext + '</div>' : '');
+    frame.appendChild(p);
+  }
 
-  // 按鈕列
-  var btnRow=el('div','img-action-row');
-  var genBtn=el('button','img-gen-btn'); genBtn.textContent='✦ 生成';
-  var refBtn=el('button','img-refresh-btn'); refBtn.textContent='↻'; refBtn.disabled=true; refBtn.title='重新生成';
+  // 初始化：如果已有選定圖就顯示
+  if (selectedCharImages[charName]) {
+    renderImage(selectedCharImages[charName].base64);
+  } else {
+    showPlaceholder('🎨', '選擇來源後開始', '');
+  }
+
+  // ── 來源切換 Tab ──
+  var srcTabs = el('div','char-src-tabs');
+  var uploadTab = el('button','char-src-tab upload-tab');
+  uploadTab.innerHTML = '📁 上傳圖片';
+  var divider = el('div','char-src-divider');
+  var aiTab = el('button','char-src-tab ai-tab active');
+  aiTab.innerHTML = '✦ AI 生成';
+  srcTabs.appendChild(uploadTab); srcTabs.appendChild(divider); srcTabs.appendChild(aiTab);
+
+  // ── 上傳區（隱藏） ──
+  var uploadArea = el('div'); uploadArea.style.display = 'none';
+
+  // 隱藏 file input
+  var fileInput = document.createElement('input');
+  fileInput.type = 'file'; fileInput.accept = 'image/*'; fileInput.style.display = 'none';
+  uploadArea.appendChild(fileInput);
+
+  // 拖放 / 點擊上傳框
+  var dropZone = el('div','upload-zone');
+  dropZone.innerHTML = '<div class="upload-zone-icon">📂</div><div class="upload-zone-text">點擊或拖曳圖片至此</div><div class="upload-zone-sub">PNG · JPG · WEBP</div>';
+  dropZone.onclick = function(){ fileInput.click(); };
+
+  // 已上傳後的「重新選擇」按鈕
+  var reselBtn = el('div','upload-reselect');
+  reselBtn.innerHTML = '↺ 重新選擇圖片'; reselBtn.style.display = 'none';
+  reselBtn.onclick = function(){ fileInput.click(); };
+
+  uploadArea.appendChild(dropZone); uploadArea.appendChild(reselBtn);
+
+  // ── AI 生成區 ──
+  var aiArea = el('div'); aiArea.style.display = 'flex'; aiArea.style.flexDirection = 'column'; aiArea.style.gap = '0';
+
+  var btnRow = el('div','img-action-row');
+  var genBtn = el('button','img-gen-btn'); genBtn.textContent = '✦ 生成';
+  var refBtn = el('button','img-refresh-btn'); refBtn.textContent = '↻'; refBtn.disabled = true; refBtn.title = '重新生成';
   btnRow.appendChild(genBtn); btnRow.appendChild(refBtn);
 
-  var progWrap=el('div','img-prog-wrap');
-  var pBar=el('div','img-prog-bar'); pBar.appendChild(el('div','img-prog-fill'));
-  var pText=el('div','img-prog-text'); pText.textContent='生成中...';
+  var progWrap = el('div','img-prog-wrap');
+  var pBar = el('div','img-prog-bar'); pBar.appendChild(el('div','img-prog-fill'));
+  var pText = el('div','img-prog-text'); pText.textContent = '生成中...';
   progWrap.appendChild(pBar); progWrap.appendChild(pText);
+  var status = el('div','img-status-text');
 
-  var status=el('div','img-status-text');
+  aiArea.appendChild(btnRow); aiArea.appendChild(progWrap); aiArea.appendChild(status);
 
-  wrap.appendChild(frame); wrap.appendChild(btnRow); wrap.appendChild(progWrap); wrap.appendChild(status);
-
-  async function doGen(){
-    genBtn.disabled=true; refBtn.disabled=true;
-    progWrap.style.display='block'; status.textContent='';
-    // 顯示 loading
-    frame.innerHTML=''; frame.appendChild(badge);
-    var loadPh=el('div','char-img-placeholder');
-    loadPh.innerHTML='<div style="font-size:18px;animation:spin 1s linear infinite;display:inline-block;">⟳</div><div>生成中...</div>';
-    frame.appendChild(loadPh);
-
-    var b64=await callImagen(prompt,[]);
-    genBtn.disabled=false; progWrap.style.display='none';
-    if(b64){renderImage(b64);refBtn.disabled=false;status.textContent='生成完成 ✓';}
-    else{
-      frame.innerHTML=''; frame.appendChild(badge);
-      var errPh=el('div','char-img-placeholder');
-      errPh.innerHTML='<div style="color:var(--coral);font-size:11px;">生成失敗，請重試</div>';
-      frame.appendChild(errPh);
-      status.textContent='失敗';
+  // ── Tab 切換邏輯 ──
+  function switchTab(tab) {
+    activeTab = tab;
+    if (tab === 'upload') {
+      uploadTab.classList.add('active'); aiTab.classList.remove('active');
+      uploadArea.style.display = 'block'; aiArea.style.display = 'none';
+      if (uploadedB64) { renderImage(uploadedB64); }
+      else { showPlaceholder('📂', '選擇圖片上傳', ''); }
+    } else {
+      aiTab.classList.add('active'); uploadTab.classList.remove('active');
+      uploadArea.style.display = 'none'; aiArea.style.display = 'flex';
+      if (generatedB64) { renderImage(generatedB64); }
+      else { showPlaceholder('🎨', '點「生成」開始', ''); }
     }
-    setTimeout(function(){status.textContent='';},3000);
   }
-  genBtn.onclick=doGen; refBtn.onclick=doGen;
+  uploadTab.onclick = function(){ switchTab('upload'); };
+  aiTab.onclick = function(){ switchTab('ai'); };
+
+  // ── 上傳處理 ──
+  function handleFile(file) {
+    if (!file || !file.type.startsWith('image/')) return;
+    var reader = new FileReader();
+    reader.onload = async function(e) {
+      var dataUrl = e.target.result;
+      var mimeType = file.type || 'image/jpeg';
+      var b64 = dataUrl.split(',')[1];
+      uploadedB64 = b64;
+      uploadedMime = mimeType;
+      uploadedAppearanceEn = ''; // 先清空
+      dropZone.style.display = 'none';
+      reselBtn.style.display = 'flex';
+      renderImage(b64, false);
+      // 自動分析圖片外觀（背景執行，不阻塞 UI）
+      status.textContent = '🔍 分析角色外觀中...';
+      var desc = await analyzeUploadedImage(b64, mimeType);
+      uploadedAppearanceEn = desc;
+      if (desc) {
+        status.textContent = '✓ 外觀分析完成，請點圖選為參考';
+        console.log('角色外觀描述:', charName, desc);
+      } else {
+        status.textContent = '上傳完成，請點 ✓ 選為參考';
+      }
+      setTimeout(function(){ status.textContent = ''; }, 4000);
+    };
+    reader.readAsDataURL(file);
+  }
+
+  fileInput.onchange = function(){ if (fileInput.files[0]) handleFile(fileInput.files[0]); };
+
+  dropZone.ondragover = function(e){ e.preventDefault(); dropZone.classList.add('dragover'); };
+  dropZone.ondragleave = function(){ dropZone.classList.remove('dragover'); };
+  dropZone.ondrop = function(e){
+    e.preventDefault(); dropZone.classList.remove('dragover');
+    var f = e.dataTransfer.files[0];
+    if (f) handleFile(f);
+  };
+
+  // ── AI 生成處理 ──
+  async function doGen() {
+    genBtn.disabled = true; refBtn.disabled = true;
+    progWrap.style.display = 'block'; status.textContent = '';
+    showPlaceholder('⟳', '生成中...', '');
+    var b64 = await callImagen(prompt, []);
+    genBtn.disabled = false; progWrap.style.display = 'none';
+    if (b64) {
+      generatedB64 = b64;
+      refBtn.disabled = false;
+      renderImage(b64);
+      status.textContent = '生成完成 ✓';
+    } else {
+      showPlaceholder('⚠', '生成失敗', '請重試');
+      status.textContent = '失敗';
+    }
+    setTimeout(function(){ status.textContent = ''; }, 3000);
+  }
+  genBtn.onclick = doGen; refBtn.onclick = doGen;
+
+  // 初始 Tab 狀態
+  if (selectedCharImages[charName]) {
+    aiTab.classList.add('active'); uploadTab.classList.remove('active');
+    generatedB64 = selectedCharImages[charName].base64;
+    aiArea.style.display = 'flex'; uploadArea.style.display = 'none';
+  }
+
+  wrap.appendChild(frame);
+  wrap.appendChild(srcTabs);
+  wrap.appendChild(uploadArea);
+  wrap.appendChild(aiArea);
+
   return wrap;
 }
 
 // ── 場景圖元件 ──
-function makeSceneImgBox(getPrompt, getRefBase64s) {
+// getCharDescs: function() => [{name, appearance}]
+function makeSceneImgBox(getPrompt, getRefBase64s, getCharDescs) {
   var section=el('div','sc-img-section');
   var frame=el('div','sc-img-frame');
   var gradient=el('div','img-gradient'); frame.appendChild(gradient);
@@ -556,6 +764,18 @@ function makeSceneImgBox(getPrompt, getRefBase64s) {
     frame.appendChild(loadPh);
     var prompt=typeof getPrompt==='function'?getPrompt():getPrompt;
     var refs=getRefBase64s?getRefBase64s():[];
+    // 把角色外觀文字描述注入 prompt，強化一致性
+    var charDescs = getCharDescs ? getCharDescs() : [];
+    if(charDescs.length>0){
+      var descText = charDescs.map(function(c){
+        return '[CHARACTER: '+c.name+'] '+c.appearance_en;
+      }).join(' [NEXT CHARACTER] ');
+      prompt = '=== STRICT CHARACTER CONSISTENCY LOCK ===\n' +
+        'The reference image(s) show the EXACT characters. You MUST replicate them with 100% fidelity.\n' +
+        'Character details to match EXACTLY:\n' + descText + '\n' +
+        'DO NOT alter: fur/hair color, body shape, face structure, eye color, markings, clothing.\n' +
+        '=== SCENE TO GENERATE ===\n' + prompt;
+    }
     var b64=await callImagen(prompt,refs);
     genBtn.disabled=false; progWrap.style.display='none';
     if(b64){renderImage(b64);refBtn.disabled=false;status.textContent='完成 ✓';}
@@ -591,7 +811,7 @@ async function generate(){
       '{"enhanced_story":"美化故事（繁中150字內）","director_vision":"導演理念（繁中40字內）","music_suggestion":"音樂建議（繁中15字內）",'+
       '"style_prompt":"整體畫風咒語（英文）：'+S.base+'+'+E+'+consistent character design+unified color grading，70字以上",'+
       '"characters":[{"name":"角色名","role":"身份","age":"年齡","appearance":"完整外觀（繁中）","personality":"個性（繁中）",'+
-      '"image_prompt":"角色全身正面參考圖英文咒語：詳細外觀+服裝+'+S.base+'+white background+character design sheet+full body front view+single character only+no text+no watermark+no frame+clean image，60字以上"}],'+
+      '"appearance_en":"角色外觀的英文描述（含臉型、髮色、眼色、膚色、服裝，30字以上，用於場景生成保持一致性）","image_prompt":"角色全身正面參考圖英文咒語：詳細外觀+服裝+'+S.base+'+white background+character design sheet+full body front view+single character only+no text+no watermark+no frame+clean image，60字以上"}],'+
       '"scenes":[{"id":1,"name":"場景名4字內","time":"0-5秒","location":"地點繁中","caption":"字幕10字內繁中","action":"動作25字內繁中","lighting":"光線繁中","emotion_note":"情感繁中","characters_in_scene":["出現角色名稱"],"image_prompt":"靜態圖英文咒語：場景+角色+光線+'+S.base+'+'+E+'，50字以上","video_prompt":"動畫咒語：場景動態動作+鏡頭運動+'+S.base+'+'+E+'，英文50字以上，適合Veo/Kling生成影片"}]}';
     var raw1=await callGemini(p1);
     var part1=JSON.parse(raw1);
@@ -773,9 +993,30 @@ function renderAll(data,S,styleKey){
     }
     var imgWrap=el('div','sc-imgwrap');
     var scChars=sc.characters_in_scene||[];
-    var sceneBox=makeSceneImgBox(fullPrompt,function(){
-      return scChars.map(function(n){return selectedCharImages[n]?selectedCharImages[n].base64:null;}).filter(Boolean);
-    });
+    var sceneBox=makeSceneImgBox(
+      fullPrompt,
+      function(){
+        // 回傳 {base64, mimeType}，確保 MIME type 正確
+        return scChars.map(function(n){
+          var ref = selectedCharImages[n];
+          if(!ref) return null;
+          return {base64: ref.base64, mimeType: ref.mimeType||'image/jpeg'};
+        }).filter(Boolean);
+      },
+      function(){
+        // 優先取 selectedCharImages 的 appearance_en（上傳圖片 Vision 分析結果）
+        // 若沒有則從 data.characters 取（AI 生成角色的描述）
+        return scChars.map(function(n){
+          var ref = selectedCharImages[n];
+          var uploadDesc = ref ? ref.appearance_en : '';
+          var ch = data.characters.find(function(c){return c.name===n;});
+          var aiDesc = ch ? (ch.appearance_en || ch.appearance || '') : '';
+          var finalDesc = uploadDesc || aiDesc;
+          if (!finalDesc) return null;
+          return { name: n, appearance_en: finalDesc };
+        }).filter(function(x){return x&&x.appearance_en;});
+      }
+    );
     imgWrap.appendChild(sceneBox);card.appendChild(imgWrap);
     w2.appendChild(card);
   });
