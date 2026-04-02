@@ -1225,7 +1225,31 @@ async function generate(){
       '"characters":[{"name":"角色名","role":"身份","age":"年齡","appearance":"完整外觀（繁中）","personality":"個性（繁中）",'+
       '"appearance_en":"角色外觀的英文描述（含臉型、髮色、眼色、膚色、服裝，30字以上，用於場景生成保持一致性）","image_prompt":"角色全身正面參考圖英文咒語：詳細外觀+服裝+'+S.base+'+white background+character design sheet+full body front view+single character only+no text+no watermark+no frame+clean image，60字以上"}],'+
       '"scenes":[{"id":1,"name":"場景名4字內","time":"0-5秒","location":"地點繁中","caption":"字幕10字內繁中","action":"動作25字內繁中","lighting":"光線繁中","emotion_note":"情感繁中","characters_in_scene":["出現角色名稱"],"image_prompt":"靜態圖英文咒語：場景+角色+光線+'+S.base+'+'+E+'，50字以上","video_prompt":"動畫咒語：場景動態動作+鏡頭運動+'+S.base+'+'+E+'，英文50字以上，適合Veo/Kling生成影片"}]}';
-    var raw1=await callGemini(p1);
+    // 帶重試的 Gemini 呼叫（自動等待後重試，最多 3 次）
+    async function callGeminiWithRetry(prompt, maxRetry){
+      maxRetry = maxRetry||3;
+      for(var attempt=0; attempt<maxRetry; attempt++){
+        try{
+          return await callGemini(prompt);
+        }catch(err){
+          var isHighDemand = err.message && (
+            err.message.indexOf('high demand') !== -1 ||
+            err.message.indexOf('503') !== -1 ||
+            err.message.indexOf('overloaded') !== -1 ||
+            err.message.indexOf('UNAVAILABLE') !== -1
+          );
+          if(isHighDemand && attempt < maxRetry-1){
+            var waitSec = (attempt+1) * 5; // 5秒、10秒遞增等待
+            document.getElementById('prog-text').textContent = '伺服器忙碌，' + waitSec + '秒後重試... (' + (attempt+1) + '/' + maxRetry + ')';
+            await new Promise(function(r){setTimeout(r, waitSec*1000);});
+          } else {
+            throw err;
+          }
+        }
+      }
+    }
+
+    var raw1=await callGeminiWithRetry(p1);
     var part1=JSON.parse(raw1);
     if(!part1.scenes||part1.scenes.length<N){
       var allScenes=part1.scenes||[];
@@ -1235,9 +1259,11 @@ async function generate(){
         if(start<=allScenes.length)continue;
         var count=end-start+1;
         document.getElementById('prog-text').textContent='生成分鏡 '+start+'-'+end+' / '+N+'...';
+        // 批次間稍作停頓，避免打太快被 Gemini 擋
+        if(b > 0){ await new Promise(function(r){setTimeout(r,1500);}); }
         var p2="只輸出JSON陣列，不要其他文字。\n故事："+part1.enhanced_story+"\n風格："+S.name+"\n情緒："+E+"\n角色："+part1.characters.map(function(c){return c.name;}).join('、')+"\n總場景"+N+"個，生成第"+start+"到第"+end+"個。\n"+
           '[{"id":'+start+',"name":"場景名4字內","time":"'+((start-1)*5)+'-'+(start*5)+'秒","location":"地點繁中","caption":"字幕10字內繁中","action":"動作25字內繁中","lighting":"光線繁中","emotion_note":"情感繁中","characters_in_scene":["出現角色名"],"image_prompt":"靜態圖英文咒語50字以上","video_prompt":"動畫咒語50字以上適合Veo/Kling"}]\n按此格式生成'+count+'個場景';
-        var raw2=await callGemini(p2);
+        var raw2=await callGeminiWithRetry(p2);
         allScenes=allScenes.concat(JSON.parse(raw2));
       }
       part1.scenes=allScenes;
