@@ -751,7 +751,7 @@ var COLORS=[
   {bg:"rgba(104,184,104,0.15)",c:"#68b868"},{bg:"rgba(88,152,216,0.15)",c:"#5898d8"},
   {bg:"rgba(216,104,168,0.15)",c:"#d868a8"},{bg:"rgba(200,200,75,0.15)",c:"#c8c84b"}
 ];
-var NO_TEXT=", vertical 9:16 format, portrait orientation, single scene only, no frame, no border, no title, no text overlay, no comic panel layout, no multiple panels, no caption, no watermark, no label, no subtitle, full bleed image, clean pure image";
+var NO_TEXT=", vertical 9:16 format, cinematic composition, dynamic scene, characters in natural poses interacting with each other, varied angles and viewpoints, no frame, no border, no title, no text overlay, no comic panel layout, no multiple panels, no caption, no watermark, no label, no subtitle, full bleed image, clean pure image";
 
 function setN(btn,n){N=n;document.querySelectorAll('.cnt').forEach(function(b){b.classList.remove('on');});btn.classList.add('on');}
 function el(tag,cls){var e=document.createElement(tag);if(cls)e.className=cls;return e;}
@@ -1224,7 +1224,7 @@ async function generate(){
       '"style_prompt":"整體畫風咒語（英文）：'+S.base+'+'+E+'+consistent character design+unified color grading，70字以上",'+
       '"characters":[{"name":"角色名","role":"身份","age":"年齡","appearance":"完整外觀（繁中）","personality":"個性（繁中）",'+
       '"appearance_en":"角色外觀的英文描述（含臉型、髮色、眼色、膚色、服裝，30字以上，用於場景生成保持一致性）","image_prompt":"角色全身正面參考圖英文咒語：詳細外觀+服裝+'+S.base+'+white background+character design sheet+full body front view+single character only+no text+no watermark+no frame+clean image，60字以上"}],'+
-      '"scenes":[{"id":1,"name":"場景名4字內","time":"0-5秒","location":"地點繁中","caption":"字幕10字內繁中","action":"動作25字內繁中","lighting":"光線繁中","emotion_note":"情感繁中","characters_in_scene":["出現角色名稱"],"image_prompt":"靜態圖英文咒語：場景+角色+光線+'+S.base+'+'+E+'，50字以上","video_prompt":"動畫咒語：場景動態動作+鏡頭運動+'+S.base+'+'+E+'，英文50字以上，適合Veo/Kling生成影片"}]}';
+      '"scenes":[{"id":1,"name":"場景名4字內","time":"0-5秒","location":"地點繁中","caption":"字幕10字內繁中","action":"動作25字內繁中","lighting":"光線繁中","emotion_note":"情感繁中","characters_in_scene":["出現角色名稱"],"composition":"角色構圖描述（繁中）：角色位置、朝向、互動動作，例如：A面向B說話、A從右方走向B、兩人對視、A背對鏡頭望向遠方","image_prompt":"靜態圖英文咒語（70字以上），必須符合：FORBIDDEN=default front-facing standing pose；REQUIRED=natural dynamic pose based on scene action（walking/turning back/side profile/looking at someone/crouching/reaching/fleeing/embracing）；包含：①場景環境 ②角色自然姿勢與身體朝向 ③角色間互動 ④光線方向 ⑤'+S.base+'+'+E+'","video_prompt":"動畫咒語（英文，60字以上，適合Veo/Kling）：必須包含①場景動態 ②角色動作 ③專業運鏡（從以下選擇最適合的：slow push in/pull out/pan left/pan right/tilt up/tilt down/crane up/crane down/tracking shot/handheld shake/dolly zoom/orbit/bird eye view/ground level/Dutch angle）④光線變化 ⑤情緒氛圍，格式：[action] + [camera movement] + [lighting] + [mood]"}]}';
     // 帶重試的 Gemini 呼叫（自動等待後重試，最多 3 次）
     async function callGeminiWithRetry(prompt, maxRetry){
       maxRetry = maxRetry||3;
@@ -1262,7 +1262,7 @@ async function generate(){
         // 批次間稍作停頓，避免打太快被 Gemini 擋
         if(b > 0){ await new Promise(function(r){setTimeout(r,1500);}); }
         var p2="只輸出JSON陣列，不要其他文字。\n故事："+part1.enhanced_story+"\n風格："+S.name+"\n情緒："+E+"\n角色："+part1.characters.map(function(c){return c.name;}).join('、')+"\n總場景"+N+"個，生成第"+start+"到第"+end+"個。\n"+
-          '[{"id":'+start+',"name":"場景名4字內","time":"'+((start-1)*5)+'-'+(start*5)+'秒","location":"地點繁中","caption":"字幕10字內繁中","action":"動作25字內繁中","lighting":"光線繁中","emotion_note":"情感繁中","characters_in_scene":["出現角色名"],"image_prompt":"靜態圖英文咒語50字以上","video_prompt":"動畫咒語50字以上適合Veo/Kling"}]\n按此格式生成'+count+'個場景';
+          '[{"id":'+start+',"name":"場景名4字內","time":"'+((start-1)*5)+'-'+(start*5)+'秒","location":"地點繁中","caption":"字幕10字內繁中","action":"動作25字內繁中","lighting":"光線繁中","emotion_note":"情感繁中","characters_in_scene":["出現角色名"],"composition":"角色構圖（朝向互動）繁中","image_prompt":"英文70字以上，FORBIDDEN=front-facing static pose，REQUIRED=natural action pose(walking direction/turning/side profile/looking at/crouching/reaching)，含場景+動態姿勢朝向+互動+光線","video_prompt":"動畫咒語英文60字以上含運鏡效果適合Veo/Kling，格式：[場景動作]+[運鏡方式如slow push in/pan/tracking/crane/dolly zoom等]+[光線]+[情緒]"}]\n按此格式生成'+count+'個場景';
         var raw2=await callGeminiWithRetry(p2);
         allScenes=allScenes.concat(JSON.parse(raw2));
       }
@@ -1417,7 +1417,9 @@ function renderAll(data,S,styleKey){
     var pd=el('div');pd.style.cssText='width:5px;height:5px;border-radius:50%;background:var(--gold);flex-shrink:0;';
     var pt=el('span');pt.style.cssText='font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--gold2);';pt.textContent='靜態圖片咒語';
     pl.appendChild(pd);pl.appendChild(pt);sp.appendChild(pl);
-    var fullPrompt=sc.image_prompt+NO_TEXT;
+    // 把角色構圖描述加進 prompt，讓角色有正確的朝向和互動
+    var compositionHint = sc.composition ? ('Characters composition and direction: ' + sc.composition + '. ') : '';
+    var fullPrompt = compositionHint + sc.image_prompt + NO_TEXT;
     sp.appendChild(makePBox(fullPrompt,null));
     card.appendChild(sp);
     if(sc.video_prompt||sc.animation_prompt){
