@@ -349,6 +349,8 @@ select option{background:var(--bg3);}
 var N=8;
 var GEMINI_KEY=(typeof CONFIG!=="undefined")?CONFIG.GEMINI_API_KEY:"";
 var GEMINI_KEY_PAID=(typeof CONFIG!=="undefined"&&CONFIG.GEMINI_API_KEY_PAID)?CONFIG.GEMINI_API_KEY_PAID:"";
+// 後端 API 位址：本機開發用 localhost，部署後換成 Railway 網址
+var API_BASE = (typeof CONFIG!=="undefined"&&CONFIG.API_BASE) ? CONFIG.API_BASE : "http://localhost:8001";
 var selectedCharImages={};
 window.selectedCharImages=selectedCharImages;
 
@@ -397,7 +399,7 @@ function makePBox(text,accentColor){
 }
 
 async function callGemini(prompt){
-  var res=await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key="+GEMINI_KEY,{
+  var res=await fetch(API_BASE+"/api/gemini/text",{
     method:"POST",headers:{"Content-Type":"application/json"},
     body:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{maxOutputTokens:8000,temperature:0.8}})
   });
@@ -405,7 +407,7 @@ async function callGemini(prompt){
   if(data.error) throw new Error(data.error.message);
   if(!data.candidates||!data.candidates[0]) throw new Error("API 未回傳候選結果，請稍後再試");
   var cand=data.candidates[0];
-  if(!cand.content) throw new Error("內容被過濾（finishReason:"+( cand.finishReason||"unknown")+"），請調整故事內容後重試");
+  if(!cand.content) throw new Error("內容被過濾（finishReason:"+(cand.finishReason||"unknown")+"），請調整故事內容後重試");
   if(!cand.content.parts||!cand.content.parts[0]) throw new Error("API 回傳結構異常（parts 為空）");
   return cand.content.parts[0].text.replace(/```json|```/g,'').trim();
 }
@@ -428,7 +430,7 @@ async function callImagen(prompt,refBase64Array){
     parts.push({text:"=== REFERENCE IMAGES PROVIDED ===\nThe image(s) above are CHARACTER REFERENCE SHEETS. Study them carefully.\nYou MUST reproduce these characters with EXACT visual fidelity:\n- Same fur/hair color, texture, and pattern\n- Same face shape, eye color, ear shape\n- Same body proportions and size\n- Same distinctive markings or features\n- Same clothing or accessories if any\nDo NOT stylize, alter, or reinterpret the characters. Treat this as a production cel sheet.\n\n=== SCENE ===\n"+prompt});
   }else{parts.push({text:prompt});}
   try{
-    var res=await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-14:generateContent?key="+key,
+    var res=await fetch(API_BASE+"/api/gemini/image",
       {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({contents:[{parts:parts}],generationConfig:{responseModalities:["IMAGE","TEXT"]}})});
     var data=await res.json();
     if(data.error){console.error("主模型錯誤:",data.error.message);return await callImagenFallback(prompt,refBase64Array);}
@@ -445,7 +447,7 @@ async function callImagenFallback(prompt,refBase64Array){
     parts.push({text:"=== REFERENCE IMAGES PROVIDED ===\nThe image(s) above are CHARACTER REFERENCE SHEETS. Study them carefully.\nYou MUST reproduce these characters with EXACT visual fidelity:\n- Same fur/hair color, texture, and pattern\n- Same face shape, eye color, ear shape\n- Same body proportions and size\n- Same distinctive markings or features\n- Same clothing or accessories if any\nDo NOT stylize, alter, or reinterpret the characters. Treat this as a production cel sheet.\n\n=== SCENE ===\n"+prompt});
   }else{parts.push({text:prompt});}
   try{
-    var res=await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key="+key,
+    var res=await fetch(API_BASE+"/api/gemini/image-fallback",
       {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({contents:[{parts:parts}],generationConfig:{responseModalities:["IMAGE","TEXT"]}})});
     var data=await res.json();
     if(data.error){console.error("備用模型錯誤:",data.error.message);return null;}
@@ -469,11 +471,9 @@ function extractImageB64(data){
 
 // ── 分析上傳圖片，產出角色外觀英文描述 ──
 async function analyzeUploadedImage(b64, mimeType) {
-  var key = GEMINI_KEY_PAID || GEMINI_KEY;
-  if (!key) return '';
   try {
     var res = await fetch(
-      "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + key,
+      API_BASE + "/api/gemini/text",
       {
         method: "POST",
         headers: {"Content-Type": "application/json"},
