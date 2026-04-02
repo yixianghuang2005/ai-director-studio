@@ -649,7 +649,7 @@ var N=8;
 var GEMINI_KEY=(typeof CONFIG!=="undefined")?CONFIG.GEMINI_API_KEY:"";
 var GEMINI_KEY_PAID=(typeof CONFIG!=="undefined"&&CONFIG.GEMINI_API_KEY_PAID)?CONFIG.GEMINI_API_KEY_PAID:"";
 // 後端 API 位址：本機開發用 localhost，部署後換成 Railway 網址
-var API_BASE = (typeof CONFIG!=="undefined"&&CONFIG.API_BASE) ? CONFIG.API_BASE : "https://ai-director-studio-production.up.railway.app";
+var API_BASE = (typeof CONFIG!=="undefined"&&CONFIG.API_BASE) ? CONFIG.API_BASE : "http://localhost:8001";
 var selectedCharImages={};
 window.selectedCharImages=selectedCharImages;
 
@@ -730,7 +730,7 @@ async function callImagen(prompt,refBase64Array){
   }else{parts.push({text:prompt});}
   try{
     var res=await fetch(API_BASE+"/api/gemini/image",
-      {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({contents:[{parts:parts}],generationConfig:{responseModalities:["IMAGE","TEXT"]}})});
+      {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({contents:[{parts:parts}],generationConfig:{responseModalities:["IMAGE","TEXT"],aspectRatio:"9:16"}})});
     var data=await res.json();
     if(data.error){console.error("主模型錯誤:",data.error.message);return await callImagenFallback(prompt,refBase64Array);}
     return extractImageB64(data)||await callImagenFallback(prompt,refBase64Array);
@@ -747,7 +747,7 @@ async function callImagenFallback(prompt,refBase64Array){
   }else{parts.push({text:prompt});}
   try{
     var res=await fetch(API_BASE+"/api/gemini/image-fallback",
-      {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({contents:[{parts:parts}],generationConfig:{responseModalities:["IMAGE","TEXT"]}})});
+      {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({contents:[{parts:parts}],generationConfig:{responseModalities:["IMAGE","TEXT"],aspectRatio:"9:16"}})});
     var data=await res.json();
     if(data.error){console.error("備用模型錯誤:",data.error.message);return null;}
     return extractImageB64(data);
