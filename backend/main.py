@@ -37,7 +37,7 @@ async def proxy_text(request: Request):
 async def proxy_image(request: Request):
     body = await request.json()
     key = GEMINI_KEY_PAID or GEMINI_KEY
-    url = f"{GEMINI_BASE}/gemini-2.5-flash-preview-05-14:generateContent?key={key}"
+    url = f"{GEMINI_BASE}/gemini-2.5-flash:generateContent?key={key}"
     async with httpx.AsyncClient(timeout=120) as client:
         res = await client.post(url, json=body)
     return JSONResponse(res.json(), status_code=res.status_code)
