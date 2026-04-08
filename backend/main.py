@@ -22,11 +22,11 @@ GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models"
 
 TEXT_MODELS = [
     "gemini-2.5-flash",
-    "gemini-2.0-flash",
+    "gemini-2.5-flash-lite-preview-06-17",
     "gemini-1.5-flash",
 ]
 
-# ── 文字生成（自動 fallback 三個模型）──
+# ── 文字生成（自動 fallback）──
 @app.post("/api/gemini/text")
 async def proxy_text(request: Request):
     body = await request.json()
