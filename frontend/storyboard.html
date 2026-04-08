@@ -1218,19 +1218,21 @@ async function generate(){
   var S=STYLES[styleKey]; var E=EMOTIONS[emotionKey];
   try{
     document.getElementById('prog-text').textContent='規劃故事與角色...';
-    var p1="你是動畫導演兼AI提示詞專家。只輸出JSON，不要其他文字。\n"+
-      "【姿勢規則】每個場景的image_prompt必須根據action欄位推導自然姿勢：\n"+
-      "走向某人→walking toward, body angled｜哭泣→hunched, shoulders down｜跑→mid-run lean forward｜"+
-      "說話→turned toward listener, gesturing｜等待→sideways, gazing distance｜擁抱→embracing side view｜"+
-      "回頭→turning back three-quarter view｜看→gazing at target head tilted｜坐下→seated natural angle\n"+
-      "FORBIDDEN: default front-facing static pose. 姿勢必須與action一致。\n\n"+
-
+    var p1="你是資深動畫導演兼AI提示詞專家，擁有電影級分鏡思維。只輸出JSON，不要其他文字。\n"+
+      "【導演原則】①場景數越多，故事必須越詳細，每個場景都要有獨特情節，避免重複 ②video_prompt是讓靜態圖片動起來的電影咒語，必須完全對應image_prompt的畫面，想像自己是導演在喊Action ③每個場景的運鏡都要有不同的情緒目的\n"+
+      "【姿勢規則】每個場景姿勢必須嚴格根據該場景自己的action欄位，嚴禁跨場景套用：\n"+
+      "只有action明確含以下詞才用對應姿勢（哭泣姿勢只在action含哭字時才出現）：\n"+
+      "走向→walking toward｜哭/哭泣→hunched crying｜跑→mid-run lean｜說話→turned toward listener｜"+
+      "等待→sideways gazing distance｜擁抱→embracing｜回頭→turning back｜看→gazing at｜坐→seated\n"+
+      "FORBIDDEN: 跨場景動作污染、預設正面站立。每場景姿勢獨立判斷。\n\n"+
       "故事："+story+"\n動畫風格："+S.name+"\n風格："+S.base+"\n情緒："+E+"\n\n"+
-      '{"enhanced_story":"美化故事（繁中150字內）","director_vision":"導演理念（繁中40字內）","music_suggestion":"音樂建議（繁中15字內）",'+
+      '{"enhanced_story":"美化故事（繁中，字數依場景數：6-8場景=150字、10-15場景=250字、18-24場景=400字；確保每場景都有對應情節，故事有起承轉合）","director_vision":"導演理念（繁中40字內）","music_suggestion":"音樂建議（繁中15字內）",'+
       '"style_prompt":"整體畫風咒語（英文）：'+S.base+'+'+E+'+consistent character design+unified color grading，70字以上",'+
       '"characters":[{"name":"角色名","role":"身份","age":"年齡","appearance":"完整外觀（繁中）","personality":"個性（繁中）",'+
       '"appearance_en":"角色外觀的英文描述（含臉型、髮色、眼色、膚色、服裝，30字以上，用於場景生成保持一致性）","image_prompt":"角色全身正面參考圖英文咒語：詳細外觀+服裝+'+S.base+'+white background+character design sheet+full body front view+single character only+no text+no watermark+no frame+clean image，60字以上"}],'+
-      '"scenes":[{"id":1,"name":"場景名4字內","time":"0-5秒","location":"地點繁中","caption":"字幕10字內繁中","action":"動作25字內繁中","lighting":"光線繁中","emotion_note":"情感繁中","characters_in_scene":["出現角色名稱"],"composition":"角色構圖描述（繁中）：角色位置、朝向、互動動作，例如：A面向B說話、A從右方走向B、兩人對視、A背對鏡頭望向遠方","image_prompt":"靜態圖英文咒語（70字以上），必須符合：FORBIDDEN=default front-facing standing pose；REQUIRED=natural dynamic pose based on scene action（walking/turning back/side profile/looking at someone/crouching/reaching/fleeing/embracing）；包含：①場景環境 ②角色自然姿勢與身體朝向 ③角色間互動 ④光線方向 ⑤'+S.base+'+'+E+'","video_prompt":"動畫咒語（英文，60字以上，適合Veo/Kling）：必須包含①場景動態 ②角色動作 ③專業運鏡（從以下選擇最適合的：slow push in/pull out/pan left/pan right/tilt up/tilt down/crane up/crane down/tracking shot/handheld shake/dolly zoom/orbit/bird eye view/ground level/Dutch angle）④光線變化 ⑤情緒氛圍，格式：[action] + [camera movement] + [lighting] + [mood]"}]}';
+      '"scenes":[{"id":1,"name":"場景名4字內","time":"0-5秒","location":"地點繁中","caption":"字幕10字內繁中","action":"動作25字內繁中","lighting":"光線繁中","emotion_note":"情感繁中","characters_in_scene":["出現角色名稱"],"composition":"角色構圖描述（繁中）：角色位置、朝向、互動動作，例如：A面向B說話、A從右方走向B、兩人對視、A背對鏡頭望向遠方",'+
+      '"image_prompt":"靜態圖英文咒語（70字以上），必須符合：FORBIDDEN=default front-facing standing pose；REQUIRED=natural dynamic pose based on scene action（walking/turning back/side profile/looking at someone/crouching/reaching/fleeing/embracing）；包含：①場景環境 ②角色自然姿勢與身體朝向 ③角色間互動 ④光線方向 ⑤'+S.base+' '+E+'",'+
+      '"video_prompt":"【導演動態咒語】英文80字以上，適合Veo/Kling。身為導演，根據image_prompt的靜態畫面，想像如何讓這張圖像電影般動起來。必須包含：①動作起點→終點（角色從哪裡動到哪裡，延續image_prompt的姿勢繼續動）②專業運鏡（選最能表達情緒的：slow push in=親密感/pull out=孤獨感/tracking=跟隨主角/crane up=宏觀視角/dolly zoom=震驚感/pan=揭示環境/handheld=真實緊張感）③光線動態變化（如：golden light shifts to shadow/spotlight follows character）④聲音提示（wind/footsteps/heartbeat/silence，供後製參考）⑤情緒收尾（結尾的情感落點），格式：[character action from pose in image_prompt] + [camera] + [light] + [sound hint] + [emotional beat]"}]}';
     // 帶重試的 Gemini 呼叫（自動等待後重試，最多 3 次）
     async function callGeminiWithRetry(prompt, maxRetry){
       maxRetry = maxRetry||3;
@@ -1268,7 +1270,7 @@ async function generate(){
         // 批次間稍作停頓，避免打太快被 Gemini 擋
         if(b > 0){ await new Promise(function(r){setTimeout(r,1500);}); }
         var p2="只輸出JSON陣列，不要其他文字。\n故事："+part1.enhanced_story+"\n風格："+S.name+"\n情緒："+E+"\n角色："+part1.characters.map(function(c){return c.name;}).join('、')+"\n總場景"+N+"個，生成第"+start+"到第"+end+"個。\n"+
-          '[{"id":'+start+',"name":"場景名4字內","time":"'+((start-1)*5)+'-'+(start*5)+'秒","location":"地點繁中","caption":"字幕10字內繁中","action":"動作25字內繁中","lighting":"光線繁中","emotion_note":"情感繁中","characters_in_scene":["出現角色名"],"composition":"角色構圖（朝向互動）繁中","image_prompt":"英文70字以上，FORBIDDEN=front-facing static pose，REQUIRED=natural action pose(walking direction/turning/side profile/looking at/crouching/reaching)，含場景+動態姿勢朝向+互動+光線","video_prompt":"動畫咒語英文60字以上含運鏡效果適合Veo/Kling，格式：[場景動作]+[運鏡方式如slow push in/pan/tracking/crane/dolly zoom等]+[光線]+[情緒]"}]\n按此格式生成'+count+'個場景';
+          '[{"id":'+start+',"name":"場景名4字內","time":"'+((start-1)*5)+'-'+(start*5)+'秒","location":"地點繁中","caption":"字幕10字內繁中","action":"動作25字內繁中","lighting":"光線繁中","emotion_note":"情感繁中","characters_in_scene":["出現角色名"],"composition":"角色構圖（朝向互動）繁中","image_prompt":"英文70字以上，FORBIDDEN=front-facing static pose，REQUIRED=natural action pose(walking direction/turning/side profile/looking at/crouching/reaching)，含場景+動態姿勢朝向+互動+光線","video_prompt":"導演動態咒語英文80字以上：根據image_prompt靜態畫面讓場景動起來，含①角色動作延續②運鏡（push in/pull out/tracking/crane/dolly zoom/pan/handheld，選最符合情緒的）③光線變化④聲音提示⑤情緒收尾，格式：[action from static pose]+[camera]+[light change]+[sound]+[emotional beat]"}]\n按此格式生成'+count+'個場景';
         var raw2=await callGeminiWithRetry(p2);
         allScenes=allScenes.concat(JSON.parse(raw2));
       }
