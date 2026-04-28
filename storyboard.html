@@ -184,7 +184,7 @@ function makePBox(text,accentColor){
   return box;
 }
 async function callGemini(prompt){
-  var res=await fetch(API_BASE+"/api/gemini/text",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{maxOutputTokens:32000,temperature:0.8}})});
+  var res=await fetch(API_BASE+"/api/gemini/text",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{maxOutputTokens:8000,temperature:0.8}})});
   var data=await res.json();
   if(data.error)throw new Error(data.error.message);
   if(!data.candidates||!data.candidates[0])throw new Error("API 未回傳候選結果，請稍後再試");
@@ -386,24 +386,8 @@ async function generate(){
         }
       }
     }
-    // 健壯解析：JSON 被截斷時嘗試救回 — 切到最後一個完整 scene 物件並補上結尾
-    function safeParseJson(raw){
-      try{return JSON.parse(raw);}catch(e1){
-        // 嘗試把字串切到最後一個完整 } 接著補上 ]} 結尾
-        var lastValid=raw.lastIndexOf('}');
-        while(lastValid>0){
-          var trial=raw.substring(0,lastValid+1);
-          // 計算尚未閉合的中括號／大括號數，補回去
-          var openSq=(trial.match(/\[/g)||[]).length-(trial.match(/\]/g)||[]).length;
-          var openCu=(trial.match(/\{/g)||[]).length-(trial.match(/\}/g)||[]).length;
-          var fixed=trial+'}'.repeat(Math.max(0,openCu))+']'.repeat(Math.max(0,openSq));
-          try{return JSON.parse(fixed);}catch(e2){lastValid=raw.lastIndexOf('}',lastValid-1);}
-        }
-        throw e1;
-      }
-    }
     var raw1=await callGeminiWithRetry(p1);
-    var part1=safeParseJson(raw1);
+    var part1=JSON.parse(raw1);
     if(!part1.scenes||part1.scenes.length<N){
       var allScenes=part1.scenes||[];var batchSize=5;
       // 多 2 次容錯，避免 AI 某批次回得不夠就漏掉場景
@@ -430,7 +414,7 @@ async function generate(){
           '[{"id":'+start+',"name":"場景名4字內","time":"'+((start-1)*5)+'-'+(start*5)+'秒","location":"地點繁中","caption":"字幕10字內繁中","action":"動作25字內繁中","lighting":"光線繁中","emotion_note":"情感繁中","characters_in_scene":["出現角色名"],"composition":"角色構圖（朝向互動）繁中","image_prompt":"英文70字以上，FORBIDDEN=front-facing static pose，REQUIRED=natural action pose，含場景+動態姿勢+互動+光線","video_prompt":"導演動態咒語英文80字以上：根據image_prompt讓場景動起來，含①角色動作延續②運鏡（push in/pull out/tracking/crane/dolly zoom/pan/handheld）③光線變化④聲音提示⑤情緒收尾"}]\n按此格式生成 '+count+' 個場景，id 從 '+start+' 連續到 '+end;
         try{
           var raw2=await callGeminiWithRetry(p2);
-          var newScenes=safeParseJson(raw2);
+          var newScenes=JSON.parse(raw2);
           if(Array.isArray(newScenes)&&newScenes.length>0){
             allScenes=allScenes.concat(newScenes);
           }
