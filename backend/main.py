@@ -25,7 +25,15 @@ TEXT_MODELS = [
     "gemini-2.5-flash-lite",
 ]
 
-# ── 文字生成（自動 fallback）──
+# Image models tried in order. Dedicated image model first to avoid
+# "Image generation is not available in your country" error from gemini-2.5-flash.
+IMAGE_MODELS = [
+    "gemini-2.5-flash-image",
+    "gemini-2.5-flash-image-preview",
+    "gemini-2.5-flash",
+]
+
+
 @app.post("/api/gemini/text")
 async def proxy_text(request: Request):
     body = await request.json()
@@ -42,27 +50,41 @@ async def proxy_text(request: Request):
             return JSONResponse(res.json(), status_code=res.status_code)
     return JSONResponse(last_res.json(), status_code=last_res.status_code)
 
-# ── 圖片生成（主模型）──
+
 @app.post("/api/gemini/image")
 async def proxy_image(request: Request):
     body = await request.json()
     key = GEMINI_KEY_PAID or GEMINI_KEY
-    url = f"{GEMINI_BASE}/gemini-2.5-flash:generateContent?key={key}"
-    async with httpx.AsyncClient(timeout=120) as client:
-        res = await client.post(url, json=body)
-    return JSONResponse(res.json(), status_code=res.status_code)
+    last_res = None
+    for model in IMAGE_MODELS:
+        url = f"{GEMINI_BASE}/{model}:generateContent?key={key}"
+        async with httpx.AsyncClient(timeout=120) as client:
+            res = await client.post(url, json=body)
+        last_res = res
+        if res.status_code == 200:
+            return JSONResponse(res.json(), status_code=200)
+        if res.status_code in [401, 403]:
+            return JSONResponse(res.json(), status_code=res.status_code)
+    return JSONResponse(last_res.json(), status_code=last_res.status_code)
 
-# ── 圖片生成（備用模型）──
+
 @app.post("/api/gemini/image-fallback")
 async def proxy_image_fallback(request: Request):
     body = await request.json()
     key = GEMINI_KEY_PAID or GEMINI_KEY
-    url = f"{GEMINI_BASE}/gemini-2.5-flash-image:generateContent?key={key}"
-    async with httpx.AsyncClient(timeout=120) as client:
-        res = await client.post(url, json=body)
-    return JSONResponse(res.json(), status_code=res.status_code)
+    last_res = None
+    for model in reversed(IMAGE_MODELS):
+        url = f"{GEMINI_BASE}/{model}:generateContent?key={key}"
+        async with httpx.AsyncClient(timeout=120) as client:
+            res = await client.post(url, json=body)
+        last_res = res
+        if res.status_code == 200:
+            return JSONResponse(res.json(), status_code=200)
+        if res.status_code in [401, 403]:
+            return JSONResponse(res.json(), status_code=res.status_code)
+    return JSONResponse(last_res.json(), status_code=last_res.status_code)
 
-# ── 健康檢查 ──
+
 @app.get("/")
 def health():
-    return {"status": "ok", "service": "超級導演分鏡系統 API"}
+    return {"status": "ok", "service": "Director Storyboard API"}
