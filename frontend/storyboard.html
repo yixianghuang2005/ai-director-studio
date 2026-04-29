@@ -360,7 +360,13 @@ async function generate(){
       "走向→walking toward｜哭/哭泣→hunched crying｜跑→mid-run lean｜說話→turned toward listener｜"+
       "等待→sideways gazing distance｜擁抱→embracing｜回頭→turning back｜看→gazing at｜坐→seated\n"+
       "FORBIDDEN: 跨場景動作污染、預設正面站立。每場景姿勢獨立判斷。\n\n"+
-      "故事："+story+"\n動畫風格："+S.name+"\n風格："+S.base+"\n情緒："+E+"\n\n"+
+      "故事："+story+"\n動畫風格："+S.name+"\n風格："+S.base+"\n情緒："+E+"\n總場景數："+N+"個\n\n"+
+      "【分鏡連貫性鐵則 — 違反任何一條視為失敗】\n"+
+      "①scenes 陣列必須剛好 "+N+" 個元素，id 從 1 連續編號到 "+N+"，禁止跳號、禁止重複、禁止亂序。\n"+
+      "②每個場景都是故事的下一步進展（時間推進／地點轉換／動作演變／情緒升級，至少一項要變化），不可內容雷同。\n"+
+      "③整體必須有完整起承轉合：開場(前 "+Math.max(1,Math.round(N*0.2))+" 場介紹角色與情境)→鋪陳(中段累積情感)→衝突(中後段事件爆發)→高潮(倒數 2-3 場最強情緒)→收尾(最後 1 場給結局)。\n"+
+      "④禁止把同一個畫面換句話再寫一次；禁止抽象重複（例如連續多場都只是『主角看著某物』）。\n"+
+      "⑤time 欄位必須對齊 id：第 N 場景的 time 是 ((N-1)*5)-(N*5)秒，例如第 3 場是 10-15秒。\n\n"+
       '{"enhanced_story":"美化故事（繁中，字數依場景數：6-8場景=150字、10-15場景=250字、18-24場景=400字；確保每場景都有對應情節，故事有起承轉合）","director_vision":"導演理念（繁中40字內）","music_suggestion":"音樂建議（繁中15字內）",'+
       '"style_prompt":"整體畫風咒語（英文）：'+S.base+'+'+E+'+consistent character design+unified color grading，70字以上",'+
       '"characters":[{"name":"角色名","role":"身份","age":"年齡","appearance":"完整外觀（繁中）：先描述臉型體型，再描述職業服裝，服裝AI自由設計","personality":"個性（繁中）",'+
@@ -383,20 +389,47 @@ async function generate(){
     var raw1=await callGeminiWithRetry(p1);
     var part1=JSON.parse(raw1);
     if(!part1.scenes||part1.scenes.length<N){
-      var allScenes=part1.scenes||[];var batchSize=5;var batches=Math.ceil(N/batchSize);
-      for(var b=0;b<batches;b++){
-        // ✅ 修正：start 以目前已有幾筆為基準，避免重複生成
-        var start=Math.max(b*batchSize+1,allScenes.length+1);
-        var end=Math.min((b+1)*batchSize,N);
-        if(start>N)continue;
+      var allScenes=part1.scenes||[];var batchSize=5;
+      // 多 2 次容錯，避免 AI 某批次回得不夠就漏掉場景
+      var maxAttempts=Math.ceil((N-allScenes.length)/batchSize)+2;
+      var attempts=0;
+      while(allScenes.length<N&&attempts<maxAttempts){
+        attempts++;
+        var start=allScenes.length+1;
+        var end=Math.min(start+batchSize-1,N);
         var count=end-start+1;
         document.getElementById('prog-text').textContent='生成分鏡 '+start+'-'+end+' / '+N+'...';
-        if(b>0){await new Promise(function(r){setTimeout(r,1500);});}
-        var p2="只輸出JSON陣列，不要其他文字。\n故事："+part1.enhanced_story+"\n風格："+S.name+"\n情緒："+E+"\n角色："+part1.characters.map(function(c){return c.name;}).join('、')+"\n總場景"+N+"個，生成第"+start+"到第"+end+"個。\n"+
-          '[{"id":'+start+',"name":"場景名4字內","time":"'+((start-1)*5)+'-'+(start*5)+'秒","location":"地點繁中","caption":"字幕10字內繁中","action":"動作25字內繁中","lighting":"光線繁中","emotion_note":"情感繁中","characters_in_scene":["出現角色名"],"composition":"角色構圖（朝向互動）繁中","image_prompt":"英文70字以上，FORBIDDEN=front-facing static pose，REQUIRED=natural action pose，含場景+動態姿勢+互動+光線","video_prompt":"導演動態咒語英文80字以上：根據image_prompt讓場景動起來，含①角色動作延續②運鏡（push in/pull out/tracking/crane/dolly zoom/pan/handheld）③光線變化④聲音提示⑤情緒收尾"}]\n按此格式生成'+count+'個場景';
-        var raw2=await callGeminiWithRetry(p2);allScenes=allScenes.concat(JSON.parse(raw2));
+        if(allScenes.length>0){await new Promise(function(r){setTimeout(r,1500);});}
+        // 把最近 3 個場景的精華傳給 AI 當上下文，確保情節延續
+        var prevCtx='';
+        if(allScenes.length>0){
+          var summaryArr=[];var lastK=Math.min(3,allScenes.length);
+          for(var pi=allScenes.length-lastK;pi<allScenes.length;pi++){
+            var ps=allScenes[pi];
+            summaryArr.push('第'+(pi+1)+'場景['+(ps.name||'')+']：'+(ps.action||ps.caption||''));
+          }
+          prevCtx='【已生成的前置場景（必須延續其劇情，不可重複內容）】\n'+summaryArr.join('\n')+'\n\n';
+        }
+        var p2="只輸出JSON陣列，不要其他文字。\n"+prevCtx+"故事："+part1.enhanced_story+"\n風格："+S.name+"\n情緒："+E+"\n角色："+part1.characters.map(function(c){return c.name;}).join('、')+"\n總共"+N+"個場景，現在生成第 "+start+" 到第 "+end+" 個。\n【鐵則】①每個場景必須延續上述前置場景的劇情、不可重複；②每場景要有獨特進展（時間或地點或動作或情緒至少要變化）；③id 必須從 "+start+" 連續編號到 "+end+"，不可跳號；④結局走向：第 "+N+" 場是整個故事的最終收尾。\n"+
+          '[{"id":'+start+',"name":"場景名4字內","time":"'+((start-1)*5)+'-'+(start*5)+'秒","location":"地點繁中","caption":"字幕10字內繁中","action":"動作25字內繁中","lighting":"光線繁中","emotion_note":"情感繁中","characters_in_scene":["出現角色名"],"composition":"角色構圖（朝向互動）繁中","image_prompt":"英文70字以上，FORBIDDEN=front-facing static pose，REQUIRED=natural action pose，含場景+動態姿勢+互動+光線","video_prompt":"導演動態咒語英文80字以上：根據image_prompt讓場景動起來，含①角色動作延續②運鏡（push in/pull out/tracking/crane/dolly zoom/pan/handheld）③光線變化④聲音提示⑤情緒收尾"}]\n按此格式生成 '+count+' 個場景，id 從 '+start+' 連續到 '+end;
+        try{
+          var raw2=await callGeminiWithRetry(p2);
+          var newScenes=JSON.parse(raw2);
+          if(Array.isArray(newScenes)&&newScenes.length>0){
+            allScenes=allScenes.concat(newScenes);
+          }
+        }catch(parseErr){console.error('批次解析失敗',parseErr);break;}
       }
       part1.scenes=allScenes;
+    }
+    // 強制正規化：保證編號 1..N 連續、長度為 N、time 跟編號對齊
+    // （這樣即使 AI 回的 id 亂跳或數量不對，畫面顯示也一定是 1, 2, 3...N）
+    if(part1.scenes&&part1.scenes.length>0){
+      if(part1.scenes.length>N)part1.scenes=part1.scenes.slice(0,N);
+      part1.scenes.forEach(function(sc,i){
+        sc.id=i+1;
+        sc.time=(i*5)+'-'+((i+1)*5)+'秒';
+      });
     }
     renderAll(part1,S,styleKey);
   }catch(e){
