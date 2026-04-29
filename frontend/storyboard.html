@@ -387,7 +387,8 @@ async function generate(){
       }
     }
     var raw1=await callGeminiWithRetry(p1);
-    var part1=JSON.parse(raw1);
+    var part1;
+    try{part1=JSON.parse(raw1);}catch(parseErr){throw new Error('AI回應格式錯誤，請重試：'+parseErr.message);}
     if(!part1.scenes||part1.scenes.length<N){
       var allScenes=part1.scenes||[];var batchSize=5;
       // 多 2 次容錯，避免 AI 某批次回得不夠就漏掉場景
@@ -500,8 +501,8 @@ function renderAll(data,S,styleKey){
   renderSavesList();results.scrollIntoView({behavior:'smooth'});
 }
 var SAVE_KEY='storyboard_saves';var currentData=null;var currentStyle=null;
-function getSaves(){try{return JSON.parse(localStorage.getItem(SAVE_KEY)||'[]');}catch(e){return[];}}
-function putSaves(arr){localStorage.setItem(SAVE_KEY,JSON.stringify(arr));}
+function getSaves(){try{var raw=localStorage.getItem(SAVE_KEY);if(!raw||raw==='')return[];return JSON.parse(raw);}catch(e){console.warn('localStorage解析失敗，已清除:',e);localStorage.removeItem(SAVE_KEY);return[];}}
+function putSaves(arr){try{localStorage.setItem(SAVE_KEY,JSON.stringify(arr));}catch(e){console.error('localStorage儲存失敗:',e);}}
 function saveCurrentData(){if(!currentData){alert('請先生成分鏡！');return;}var title=prompt('請輸入儲存名稱：',currentData.enhanced_story.substring(0,20)+'...');if(!title)return;var saves=getSaves();saves.unshift({id:Date.now(),title:title,date:new Date().toLocaleString('zh-TW'),data:currentData,styleKey:document.getElementById('style').value});if(saves.length>20)saves=saves.slice(0,20);putSaves(saves);renderSavesList();alert('已儲存！');}
 function loadSave(id){var saves=getSaves();var item=saves.find(function(s){return s.id===id;});if(!item)return;currentData=item.data;currentStyle=STYLES[item.styleKey]||STYLES['pixar'];document.getElementById('style').value=item.styleKey||'pixar';renderAll(item.data,currentStyle,item.styleKey||'pixar');}
 function deleteSave(id){if(!confirm('確定刪除？'))return;putSaves(getSaves().filter(function(s){return s.id!==id;}));renderSavesList();}
