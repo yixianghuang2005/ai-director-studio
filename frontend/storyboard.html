@@ -184,7 +184,7 @@ function makePBox(text,accentColor){
   return box;
 }
 async function callGemini(prompt){
-  var res=await fetch(API_BASE+"/api/gemini/text",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{maxOutputTokens:8000,temperature:0.8}})});
+  var res=await fetch(API_BASE+"/api/gemini/text",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{maxOutputTokens:32000,temperature:0.8}})});
   var data=await res.json();
   if(data.error)throw new Error(data.error.message);
   if(!data.candidates||!data.candidates[0])throw new Error("API 未回傳候選結果，請稍後再試");
@@ -349,12 +349,20 @@ async function generate(){
   try{
     document.getElementById('prog-text').textContent='規劃故事與角色...';
     var p1="你是資深動畫導演兼AI提示詞專家，擁有電影級分鏡思維。只輸出JSON，不要其他文字。\n"+
-      "【鐵則：角色外貌由故事身份決定，職業只影響服裝】\n"+
-      "①先看故事說這個人是什麼『人』→決定臉型體型眼神（最高優先）②再看職業→決定服裝道具（次要）③AI自由設計服裝細節\n"+
-      "身份特徵必須嚴格套用：\n"+
-      "喜憨兒/智能障礙→必須有 round face, almond-shaped eyes, chubby cheeks, thick lips, slightly open mouth, innocent childlike expression, heavy-set build（不可生成普通臉蛋）\n"+
-      "老人/阿公阿嬤→deep wrinkles, white hair, hunched posture, age spots｜小孩→chubby cheeks, big eyes, child proportions\n"+
-      "FORBIDDEN: 把故事中特殊身份角色（障礙者/老人/孩童）美化成普通帥哥美女。\n\n"+
+      "【最最優先：先判斷角色是『人類』還是『動物』！】\n"+
+      "讀故事時先辨識每個角色的物種，**動物角色絕對不可以畫成人類**：\n"+
+      "🐱 貓（小貓/貓媽媽）→ 必須是真實貓咪外型：feline body, four paws, fur coat, whiskers, pointed ears, long tail, vertical pupils；不可有人類臉、不可穿人類衣服（可有圍巾/領巾等寵物配件）。appearance 描述要寫毛色、花紋、耳朵形狀、眼睛顏色、體型大小（kitten/adult cat），絕對不可寫人類五官。\n"+
+      "🐶 狗（小狗）→ 必須是真實狗狗外型：canine body, four legs, fur coat, floppy/pointed ears, wagging tail, snout；同上，不可人類化。要寫犬種或近似犬種、毛色、耳型、體型。\n"+
+      "🐰🐻🦁 其他動物 → 同理，按物種真實外觀描述，重點：毛皮/鱗片、四肢、耳朵、尾巴、口鼻部、眼睛形狀。\n"+
+      "👤 人類角色才適用以下身份規則：\n"+
+      "  喜憨兒/智能障礙→round face, almond-shaped eyes, chubby cheeks, thick lips, slightly open mouth, innocent childlike expression, heavy-set build\n"+
+      "  老人/阿公阿嬤→deep wrinkles, white hair, hunched posture, age spots\n"+
+      "  小孩（人類）→chubby cheeks, big eyes, child proportions\n"+
+      "  職業只影響服裝，AI 自由設計服裝細節。\n"+
+      "FORBIDDEN（最重要）：\n"+
+      "  ① 把動物角色畫成人類（例：把『小貓』寫成 round face thick lips 等人臉特徵 = 嚴重錯誤）\n"+
+      "  ② 把人類特殊身份（障礙者/老人/孩童）美化成普通帥哥美女\n"+
+      "  ③ 動物角色的 appearance_en / image_prompt 出現 face, lips, cheeks, human 等人類專屬詞彙\n\n"+
       "【導演原則】①場景數越多，故事必須越詳細，每個場景都要有獨特情節，避免重複 ②video_prompt是讓靜態圖片動起來的電影咒語，必須完全對應image_prompt的畫面，想像自己是導演在喊Action ③每個場景的運鏡都要有不同的情緒目的\n"+
       "【姿勢規則】每個場景姿勢必須嚴格根據該場景自己的action欄位，嚴禁跨場景套用：\n"+
       "走向→walking toward｜哭/哭泣→hunched crying｜跑→mid-run lean｜說話→turned toward listener｜"+
@@ -370,7 +378,7 @@ async function generate(){
       '{"enhanced_story":"美化故事（繁中，字數依場景數：6-8場景=150字、10-15場景=250字、18-24場景=400字；確保每場景都有對應情節，故事有起承轉合）","director_vision":"導演理念（繁中40字內）","music_suggestion":"音樂建議（繁中15字內）",'+
       '"style_prompt":"整體畫風咒語（英文）：'+S.base+'+'+E+'+consistent character design+unified color grading，70字以上",'+
       '"characters":[{"name":"角色名","role":"身份","age":"年齡","appearance":"完整外觀（繁中）：先描述臉型體型，再描述職業服裝，服裝AI自由設計","personality":"個性（繁中）",'+
-      '"appearance_en":"角色外觀英文描述30字以上：純視覺特徵，如 round face wide-set eyes flat nasal bridge chubby cheeks","image_prompt":"角色全身正面參考圖英文咒語（70字以上）：【臉型體型最優先，只用純視覺詞彙】圓臉→round face；寬眼距→wide-set eyes with gentle upward slant；扁鼻→flat nasal bridge；胖臉頰→chubby full cheeks；厚嘴唇微開→thick lower lip slightly open relaxed mouth；憨厚笑容→warm innocent gentle expression；矮壯→short neck heavy-set sturdy build；老人→deep wrinkles white hair hunched posture；小孩→big eyes chubby cheeks child proportions；【服裝AI自由設計】符合職業氛圍；【畫風】'+S.base+'+white background+character design sheet+full body front view+single character only+no text+no watermark+no frame+clean image"}],'+
+      '"appearance_en":"角色外觀英文描述30字以上：純視覺特徵。動物：fluffy fur, four paws, pointed ears, long tail, whiskers, etc；人類：round face wide-set eyes 等。先辨識物種","image_prompt":"角色全身參考圖英文咒語（70字以上）：【先寫物種與物種特徵】動物→cute realistic [species] (cat/dog/rabbit etc), [fur color and pattern], [ear shape], [eye color], [body size], on all fours pose（四足站姿），可選帶 small bib/scarf/collar；人類→【臉型體型最優先】圓臉→round face；寬眼距→wide-set eyes；扁鼻→flat nasal bridge；胖臉頰→chubby full cheeks；厚嘴唇微開→thick lower lip slightly open；憨厚笑容→warm innocent expression；矮壯→short neck heavy-set sturdy build；老人→deep wrinkles white hair hunched posture；小孩→big eyes chubby cheeks child proportions；【服裝】動物角色不穿衣服，可選配件；人類角色 AI 自由設計服裝符合職業氛圍；【畫風】'+S.base+'+white background+character design sheet+full body view+single character only+no text+no watermark+no frame+clean image"}],'+
       '"scenes":[{"id":1,"name":"場景名4字內","time":"0-5秒","location":"地點繁中","caption":"字幕10字內繁中","action":"動作25字內繁中","lighting":"光線繁中","emotion_note":"情感繁中","characters_in_scene":["出現角色名稱"],"composition":"角色構圖描述（繁中）：角色位置、朝向、互動動作，例如：A面向B說話、A從右方走向B、兩人對視、A背對鏡頭望向遠方",'+
       '"image_prompt":"靜態圖英文咒語（70字以上），必須符合：FORBIDDEN=default front-facing standing pose；REQUIRED=natural dynamic pose based on scene action（walking/turning back/side profile/looking at someone/crouching/reaching/fleeing/embracing）；包含：①場景環境 ②角色自然姿勢與身體朝向 ③角色間互動 ④光線方向 ⑤'+S.base+' '+E+'",'+
       '"video_prompt":"【導演動態咒語】英文80字以上，適合Veo/Kling。身為導演，根據image_prompt的靜態畫面，想像如何讓這張圖像電影般動起來。必須包含：①動作起點→終點（角色從哪裡動到哪裡，延續image_prompt的姿勢繼續動）②專業運鏡（選最能表達情緒的：slow push in=親密感/pull out=孤獨感/tracking=跟隨主角/crane up=宏觀視角/dolly zoom=震驚感/pan=揭示環境/handheld=真實緊張感）③光線動態變化（如：golden light shifts to shadow/spotlight follows character）④聲音提示（wind/footsteps/heartbeat/silence，供後製參考）⑤情緒收尾（結尾的情感落點），格式：[character action from pose in image_prompt] + [camera] + [light] + [sound hint] + [emotional beat]"}]}';
@@ -386,29 +394,33 @@ async function generate(){
         }
       }
     }
-    var raw1=await callGeminiWithRetry(p1);
-    var part1;
-    try{
-      // 清理可能的格式問題
-      var cleaned=raw1.replace(/```json|```/g,'').trim();
-      // 嘗試修復常見的 JSON 錯誤
-      if(!cleaned.endsWith('}')){
-        // 如果 JSON 沒有正確結尾，記錄錯誤但嘗試修復
-        console.warn('JSON 似乎不完整，嘗試修復...');
-        // 計算需要補齊的括號
-        var openBraces=(cleaned.match(/\{/g)||[]).length;
-        var closeBraces=(cleaned.match(/\}/g)||[]).length;
-        var openBrackets=(cleaned.match(/\[/g)||[]).length;
-        var closeBrackets=(cleaned.match(/\]/g)||[]).length;
-        // 補齊缺少的括號
-        for(var i=0;i<(openBrackets-closeBrackets);i++){cleaned+=']';}
-        for(var i=0;i<(openBraces-closeBraces);i++){cleaned+='}';}
+    // 健壯解析：JSON 被截斷時嘗試救回 — 切到最後一個完整 } 並依括號堆疊順序補齊
+    function safeParseJson(raw){
+      try{return JSON.parse(raw);}catch(e1){
+        var lastValid=raw.lastIndexOf('}');
+        while(lastValid>0){
+          var trial=raw.substring(0,lastValid+1);
+          var stack=[],inString=false,escape=false;
+          for(var i=0;i<trial.length;i++){
+            var c=trial[i];
+            if(escape){escape=false;continue;}
+            if(c==='\\'){escape=true;continue;}
+            if(c==='"'){inString=!inString;continue;}
+            if(inString)continue;
+            if(c==='{'||c==='[')stack.push(c);
+            else if(c==='}'&&stack[stack.length-1]==='{')stack.pop();
+            else if(c===']'&&stack[stack.length-1]==='[')stack.pop();
+          }
+          var closing='';
+          for(var j=stack.length-1;j>=0;j--)closing+=(stack[j]==='{'?'}':']');
+          try{return JSON.parse(trial+closing);}
+          catch(e2){lastValid=raw.lastIndexOf('}',lastValid-1);}
+        }
+        throw e1;
       }
-      part1=JSON.parse(cleaned);
-    }catch(parseErr){
-      console.error('原始回應:',raw1.substring(0,500)+'...');
-      throw new Error('AI回應格式錯誤 ('+parseErr.message+')，請重試。如果問題持續，請簡化故事內容。');
     }
+    var raw1=await callGeminiWithRetry(p1);
+    var part1=safeParseJson(raw1);
     if(!part1.scenes||part1.scenes.length<N){
       var allScenes=part1.scenes||[];var batchSize=5;
       // 多 2 次容錯，避免 AI 某批次回得不夠就漏掉場景
@@ -435,25 +447,11 @@ async function generate(){
           '[{"id":'+start+',"name":"場景名4字內","time":"'+((start-1)*5)+'-'+(start*5)+'秒","location":"地點繁中","caption":"字幕10字內繁中","action":"動作25字內繁中","lighting":"光線繁中","emotion_note":"情感繁中","characters_in_scene":["出現角色名"],"composition":"角色構圖（朝向互動）繁中","image_prompt":"英文70字以上，FORBIDDEN=front-facing static pose，REQUIRED=natural action pose，含場景+動態姿勢+互動+光線","video_prompt":"導演動態咒語英文80字以上：根據image_prompt讓場景動起來，含①角色動作延續②運鏡（push in/pull out/tracking/crane/dolly zoom/pan/handheld）③光線變化④聲音提示⑤情緒收尾"}]\n按此格式生成 '+count+' 個場景，id 從 '+start+' 連續到 '+end;
         try{
           var raw2=await callGeminiWithRetry(p2);
-          // 清理並修復 JSON
-          var cleaned2=raw2.replace(/```json|```/g,'').trim();
-          if(!cleaned2.endsWith(']')){
-            console.warn('批次 JSON 不完整，嘗試修復...');
-            var openBrackets2=(cleaned2.match(/\[/g)||[]).length;
-            var closeBrackets2=(cleaned2.match(/\]/g)||[]).length;
-            var openBraces2=(cleaned2.match(/\{/g)||[]).length;
-            var closeBraces2=(cleaned2.match(/\}/g)||[]).length;
-            for(var i=0;i<(openBraces2-closeBraces2);i++){cleaned2+='}';}
-            for(var i=0;i<(openBrackets2-closeBrackets2);i++){cleaned2+=']';}
-          }
-          var newScenes=JSON.parse(cleaned2);
+          var newScenes=safeParseJson(raw2);
           if(Array.isArray(newScenes)&&newScenes.length>0){
             allScenes=allScenes.concat(newScenes);
           }
-        }catch(parseErr){
-          console.error('批次解析失敗',parseErr,'原始內容:',raw2?raw2.substring(0,300)+'...':'無');
-          break;
-        }
+        }catch(parseErr){console.error('批次解析失敗',parseErr);break;}
       }
       part1.scenes=allScenes;
     }
@@ -535,8 +533,8 @@ function renderAll(data,S,styleKey){
   renderSavesList();results.scrollIntoView({behavior:'smooth'});
 }
 var SAVE_KEY='storyboard_saves';var currentData=null;var currentStyle=null;
-function getSaves(){try{var raw=localStorage.getItem(SAVE_KEY);if(!raw||raw==='')return[];return JSON.parse(raw);}catch(e){console.warn('localStorage解析失敗，已清除:',e);localStorage.removeItem(SAVE_KEY);return[];}}
-function putSaves(arr){try{localStorage.setItem(SAVE_KEY,JSON.stringify(arr));}catch(e){console.error('localStorage儲存失敗:',e);}}
+function getSaves(){try{return JSON.parse(localStorage.getItem(SAVE_KEY)||'[]');}catch(e){return[];}}
+function putSaves(arr){localStorage.setItem(SAVE_KEY,JSON.stringify(arr));}
 function saveCurrentData(){if(!currentData){alert('請先生成分鏡！');return;}var title=prompt('請輸入儲存名稱：',currentData.enhanced_story.substring(0,20)+'...');if(!title)return;var saves=getSaves();saves.unshift({id:Date.now(),title:title,date:new Date().toLocaleString('zh-TW'),data:currentData,styleKey:document.getElementById('style').value});if(saves.length>20)saves=saves.slice(0,20);putSaves(saves);renderSavesList();alert('已儲存！');}
 function loadSave(id){var saves=getSaves();var item=saves.find(function(s){return s.id===id;});if(!item)return;currentData=item.data;currentStyle=STYLES[item.styleKey]||STYLES['pixar'];document.getElementById('style').value=item.styleKey||'pixar';renderAll(item.data,currentStyle,item.styleKey||'pixar');}
 function deleteSave(id){if(!confirm('確定刪除？'))return;putSaves(getSaves().filter(function(s){return s.id!==id;}));renderSavesList();}
