@@ -198,20 +198,59 @@ async function callGemini(prompt){
 function normalizeRefs(refArray){
   return (refArray||[]).map(function(r){if(typeof r==='string')return{base64:r,mimeType:'image/png'};return{base64:r.base64||r,mimeType:r.mimeType||'image/jpeg'};}).filter(function(r){return r.base64&&r.base64.length>100;});
 }
+// 把可能觸發 Gemini 安全過濾的字詞替換成中性版（避免角色生圖被擋）
+function sanitizePrompt(prompt){
+  if(!prompt)return prompt;
+  var rules=[
+    // 英文敏感詞 → 中性替代
+    [/\b(hit|hitting|striking|punching|slapping|beating|kicked|kicking|whip\w*)\b/gi,'gently pushing'],
+    [/\b(violent\w*|aggressive\w*|hostile\w*|attacking)\b/gi,'energetic'],
+    [/\b(angry|anger|furious|enraged|wrath|rage|raging|hateful)\b/gi,'serious focused'],
+    [/\b(scold\w*|rebuk\w*|yell\w*|shout\w*|cursing)\b/gi,'speaking firmly'],
+    [/\b(threat\w*|menac\w*|intimidat\w*)\b/gi,'cautious'],
+    [/\b(blood\w*|wound\w*|injur\w*|bruis\w*|scar\w*|bleeding)\b/gi,'weary'],
+    [/\b(weapon\w*|knife|knives|gun|guns|sword|swords|blade|blades)\b/gi,'tool'],
+    [/\b(fight\w*|battle|combat|brawl)\b/gi,'tense interaction'],
+    [/\b(kill\w*|murder\w*|dead|death|corpse|kill\w*)\b/gi,'still'],
+    [/\b(steal\w*|thief|robbery|robber|rob\b)\b/gi,'reaching for'],
+    [/\b(despair|grief|miserable|tragedy|tragic)\b/gi,'emotional'],
+    // 中文敏感詞
+    [/打罵|毆打|打傷|揍|毆/g,'輕推'],
+    [/抓住.{0,4}打/g,'制止'],
+    [/血|傷口|流血|受傷|傷痕/g,'疲憊'],
+    [/憤怒|生氣|怒氣|怒視/g,'認真'],
+    [/兇狠|兇惡|凶|殘忍/g,'嚴肅'],
+    [/責備|斥責|怒罵|大罵/g,'勸說'],
+    [/恐嚇|威脅/g,'警示'],
+    [/偷|搶|竊/g,'拿取'],
+    [/死亡|屍體/g,'休息']
+  ];
+  var result=prompt;
+  for(var i=0;i<rules.length;i++){result=result.replace(rules[i][0],rules[i][1]);}
+  return result;
+}
 async function callImagen(prompt,refBase64Array){
+  // 進入生圖前先清理 prompt，降低安全過濾誤殺
+  prompt=sanitizePrompt(prompt);
   var parts=[];var validRefs=normalizeRefs(refBase64Array);
-  if(validRefs.length>0){validRefs.forEach(function(r){parts.push({inlineData:{mimeType:r.mimeType,data:r.base64}});});parts.push({text:"=== REFERENCE IMAGES PROVIDED ===\nThe image(s) above are CHARACTER REFERENCE SHEETS. Study them carefully.\nYou MUST reproduce these characters with EXACT visual fidelity:\n- Same fur/hair color, texture, and pattern\n- Same face shape, eye color, ear shape\n- Same body proportions and size\n- Same distinctive markings or features\n- Same clothing or accessories if any\nDo NOT stylize, alter, or reinterpret the characters. Treat this as a production cel sheet.\n\n=== SCENE ===\n"+prompt});}else{parts.push({text:prompt});}
+  if(validRefs.length>0){validRefs.forEach(function(r){parts.push({inlineData:{mimeType:r.mimeType,data:r.base64}});});parts.push({text:"=== CHARACTER VISUAL IDENTITY REFERENCE (appearance only) ===\nThe image(s) above show ONLY the visual IDENTITY of the characters.\nCOPY from reference: fur/hair color, pattern, face shape, eye color, body proportions, distinctive markings, signature accessories (collar/scarf/bib).\n\n*** CRITICAL — DO NOT COPY FROM REFERENCE ***\n- DO NOT copy the pose, body angle, or stance from reference.\n- DO NOT copy the facial expression or mood from reference (reference is neutral/happy; scene may need sad/scared/angry/tired).\n- DO NOT copy the framing, distance from camera, or composition from reference.\n- DO NOT place all characters together if scene says they are apart.\n- IGNORE the reference's pose entirely. The scene description below is the SOLE source of truth for action, pose, expression, distance, and framing.\n\n*** Scene composition rules ***\n- If scene says 'fleeing/running away/in the distance' → character must be small, far, motion-blurred, mid-stride, NOT centered and calm.\n- If scene says 'hiding behind X / peeking from shadows' → character must be partially obscured, only head/eyes visible, NOT fully revealed.\n- If scene says 'injured/weary/sad/scared' → expression must reflect that emotion, NOT the reference's neutral smile.\n- If scene says 'looking at each other from afar' → use distance and depth, do NOT bring them side by side.\n\n=== SCENE TO RENDER (this is the ONLY truth for pose/composition/emotion) ===\n"+prompt});}else{parts.push({text:prompt});}
   try{
     var res=await fetch(API_BASE+"/api/gemini/image",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({contents:[{parts:parts}],generationConfig:{responseModalities:["IMAGE","TEXT"]}})});
     var data=await res.json();
-    if(data.error){console.error("主模型錯誤:",data.error.message);return await callImagenFallback(prompt,refBase64Array);}
+    if(data.error){console.error("主模型錯誤:",data.error.message);window.lastImageError='主模型: '+data.error.message;return await callImagenFallback(prompt,refBase64Array);}
+    // 偵測安全過濾：候選結果存在但沒回圖
+    if(data.candidates&&data.candidates[0]){
+      var c=data.candidates[0];var fr=c.finishReason||'';
+      if(fr==='SAFETY'||fr==='PROHIBITED_CONTENT'||fr==='IMAGE_SAFETY'){console.warn("被安全過濾擋下:",fr);window.lastImageError='安全過濾: '+fr+' — 已自動清理敏感字詞重試中';}
+    }
     var b64=extractImageB64(data)||await callImagenFallback(prompt,refBase64Array);
     return b64?await cropTo916(b64):null;
-  }catch(e){console.error("callImagen exception:",e);var fb=await callImagenFallback(prompt,refBase64Array);return fb?await cropTo916(fb):null;}
+  }catch(e){console.error("callImagen exception:",e);window.lastImageError='例外: '+e.message;var fb=await callImagenFallback(prompt,refBase64Array);return fb?await cropTo916(fb):null;}
 }
 async function callImagenFallback(prompt,refBase64Array){
+  prompt=sanitizePrompt(prompt);
   var parts=[];var validRefs=normalizeRefs(refBase64Array);
-  if(validRefs.length>0){validRefs.forEach(function(r){parts.push({inlineData:{mimeType:r.mimeType,data:r.base64}});});parts.push({text:"=== REFERENCE IMAGES PROVIDED ===\nCharacter reference above. Reproduce with 100% fidelity.\n\n=== SCENE ===\n"+prompt});}else{parts.push({text:prompt});}
+  if(validRefs.length>0){validRefs.forEach(function(r){parts.push({inlineData:{mimeType:r.mimeType,data:r.base64}});});parts.push({text:"=== CHARACTER IDENTITY REFERENCE (copy appearance only) ===\nCopy from reference: fur/hair color, pattern, face shape, eye color, body proportions, signature accessories.\nDO NOT copy: pose, expression, distance, framing, composition. Those come ONLY from the scene below.\n\n=== SCENE TO RENDER ===\n"+prompt});}else{parts.push({text:prompt});}
   try{
     var res=await fetch(API_BASE+"/api/gemini/image-fallback",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({contents:[{parts:parts}],generationConfig:{responseModalities:["IMAGE","TEXT"]}})});
     var data=await res.json();if(data.error){console.error("備用模型錯誤:",data.error.message);return null;}
@@ -300,7 +339,7 @@ function makeCharImgBox(charName,prompt,onSelect){
     genBtn.disabled=true;refBtn.disabled=true;progWrap.style.display='block';status.textContent='';showPlaceholder('⟳','生成中...','');
     var b64=await callImagen(prompt,[]);genBtn.disabled=false;progWrap.style.display='none';
     if(b64){generatedB64=b64;refBtn.disabled=false;renderImage(b64);status.textContent='生成完成 ✓';}
-    else{showPlaceholder('⚠','生成失敗','請重試');status.textContent='失敗';}
+    else{var errMsg=window.lastImageError||'未知錯誤';showPlaceholder('⚠','生成失敗',errMsg.length>30?errMsg.substring(0,30)+'…':errMsg);status.textContent='失敗：'+errMsg;console.error('角色生圖失敗 - prompt:',prompt);}
     setTimeout(function(){status.textContent='';},3000);
   }
   genBtn.onclick=doGen;refBtn.onclick=doGen;
@@ -377,12 +416,31 @@ async function generate(){
       "③整體必須有完整起承轉合：開場(前 "+Math.max(1,Math.round(N*0.2))+" 場介紹角色與情境)→鋪陳(中段累積情感)→衝突(中後段事件爆發)→高潮(倒數 2-3 場最強情緒)→收尾(最後 1 場給結局)。\n"+
       "④禁止把同一個畫面換句話再寫一次；禁止抽象重複（例如連續多場都只是『主角看著某物』）。\n"+
       "⑤time 欄位必須對齊 id：第 N 場景的 time 是 ((N-1)*5)-(N*5)秒，例如第 3 場是 10-15秒。\n\n"+
+      "【電影鏡頭語言鐵則 — 每個場景都必須在 image_prompt 開頭明確標註鏡位】\n"+
+      "你是電影導演，禁止連續多場用相同鏡位，必須像專業電影一樣變化鏡頭：\n"+
+      "鏡位字典（依情境選最適合的，每場景都要不同）：\n"+
+      "  • establishing wide shot / extreme wide shot — 開場交代環境用\n"+
+      "  • wide shot — 角色全景與環境關係\n"+
+      "  • medium shot — 對話、互動\n"+
+      "  • medium close-up — 情緒鋪陳\n"+
+      "  • close-up — 強烈情緒（眼神、表情、單一動作焦點）\n"+
+      "  • extreme close-up — 關鍵物件（眼淚、手部動作、物品特寫）\n"+
+      "  • over-the-shoulder shot — 兩角色對話／注視\n"+
+      "  • low angle shot — 角色顯得強大、威嚴或反派視角\n"+
+      "  • high angle shot — 角色顯得渺小、無助、被觀察\n"+
+      "  • dutch angle / canted angle — 不安、混亂、衝突感\n"+
+      "  • POV shot — 從角色眼中看出去\n"+
+      "  • dolly zoom / vertigo effect — 震驚、心理崩潰瞬間\n"+
+      "  • bird's eye view — 全局俯瞰、孤獨感\n"+
+      "  • silhouette shot — 剪影、神秘氛圍\n"+
+      "建議分配：開場用 establishing/wide，衝突用 low/dutch，情感高潮用 close-up/extreme close-up，對話用 OTS，結尾用 wide 或 high angle。\n"+
+      "image_prompt 必須以鏡位開頭，例如：『low angle shot of...』『close-up on the kitten's tearful eyes...』『over-the-shoulder shot from the puppy's view watching...』。\n\n"+
       '{"enhanced_story":"美化故事（繁中，字數依場景數：6-8場景=150字、10-15場景=250字、18-24場景=400字；確保每場景都有對應情節，故事有起承轉合）","director_vision":"導演理念（繁中40字內）","music_suggestion":"音樂建議（繁中15字內）",'+
       '"style_prompt":"整體畫風咒語（英文）：'+S.base+'+'+E+'+consistent character design+unified color grading，70字以上",'+
       '"characters":[{"name":"角色名","role":"身份","age":"年齡","appearance":"完整外觀（繁中）：先描述臉型體型，再描述職業服裝，服裝AI自由設計","personality":"個性（繁中）",'+
       '"appearance_en":"角色外觀英文描述30字以上：純視覺特徵。動物：fluffy fur, four paws, pointed ears, long tail, whiskers, etc；人類：round face wide-set eyes 等。先辨識物種","image_prompt":"角色全身參考圖英文咒語（70字以上）：【先寫物種與物種特徵】動物→cute realistic [species] (cat/dog/rabbit etc), [fur color and pattern], [ear shape], [eye color], [body size], on all fours pose（四足站姿），可選帶 small bib/scarf/collar；人類→【臉型體型最優先】圓臉→round face；寬眼距→wide-set eyes；扁鼻→flat nasal bridge；胖臉頰→chubby full cheeks；厚嘴唇微開→thick lower lip slightly open；憨厚笑容→warm innocent expression；矮壯→short neck heavy-set sturdy build；老人→deep wrinkles white hair hunched posture；小孩→big eyes chubby cheeks child proportions；【服裝】動物角色不穿衣服，可選配件；人類角色 AI 自由設計服裝符合職業氛圍；【畫風】'+S.base+'+white background+single character full body portrait+entire subject visible head to toe (or head to tail for animals)+no cropping+no multi-angle+no design sheet+single subject only+no text+no watermark+no frame+clean centered composition"}],'+
       '"scenes":[{"id":1,"name":"場景名4字內","time":"0-5秒","location":"地點繁中","caption":"字幕10字內繁中","action":"動作25字內繁中","lighting":"光線繁中","emotion_note":"情感繁中","characters_in_scene":["出現角色名稱"],"composition":"角色構圖描述（繁中）：角色位置、朝向、互動動作，例如：A面向B說話、A從右方走向B、兩人對視、A背對鏡頭望向遠方",'+
-      '"image_prompt":"靜態圖英文咒語（70字以上），必須符合：FORBIDDEN=default front-facing standing pose；REQUIRED=natural dynamic pose based on scene action（walking/turning back/side profile/looking at someone/crouching/reaching/fleeing/embracing）；包含：①場景環境 ②角色自然姿勢與身體朝向 ③角色間互動 ④光線方向 ⑤'+S.base+' '+E+'",'+
+      '"image_prompt":"靜態圖英文咒語（80字以上）。**必須以鏡位英文詞開頭**（從鏡位字典選最適合此場景情緒/動作的，如 low angle shot, close-up, over-the-shoulder, dutch angle 等，禁止 default front-facing eye-level）。FORBIDDEN=default front-facing standing pose, repeating same shot type as previous scene。REQUIRED=cinematic shot composition based on scene emotion + natural dynamic pose based on scene action（walking/turning back/side profile/looking at someone/crouching/reaching/fleeing/embracing/hiding/peeking）。結構：[shot type] of [character pose+action] in [environment], [light direction], [depth/framing detail], [lens hint e.g. 50mm/85mm/wide angle 24mm], '+S.base+' '+E+'",'+
       '"video_prompt":"【導演動態咒語】英文80字以上，適合Veo/Kling。身為導演，根據image_prompt的靜態畫面，想像如何讓這張圖像電影般動起來。必須包含：①動作起點→終點（角色從哪裡動到哪裡，延續image_prompt的姿勢繼續動）②專業運鏡（選最能表達情緒的：slow push in=親密感/pull out=孤獨感/tracking=跟隨主角/crane up=宏觀視角/dolly zoom=震驚感/pan=揭示環境/handheld=真實緊張感）③光線動態變化（如：golden light shifts to shadow/spotlight follows character）④聲音提示（wind/footsteps/heartbeat/silence，供後製參考）⑤情緒收尾（結尾的情感落點），格式：[character action from pose in image_prompt] + [camera] + [light] + [sound hint] + [emotional beat]"}]}';
 
     async function callGeminiWithRetry(prompt,maxRetry){
@@ -445,8 +503,8 @@ async function generate(){
           }
           prevCtx='【已生成的前置場景（必須延續其劇情，不可重複內容）】\n'+summaryArr.join('\n')+'\n\n';
         }
-        var p2="只輸出JSON陣列，不要其他文字。\n"+prevCtx+"故事："+part1.enhanced_story+"\n風格："+S.name+"\n情緒："+E+"\n角色："+part1.characters.map(function(c){return c.name;}).join('、')+"\n總共"+N+"個場景，現在生成第 "+start+" 到第 "+end+" 個。\n【鐵則】①每個場景必須延續上述前置場景的劇情、不可重複；②每場景要有獨特進展（時間或地點或動作或情緒至少要變化）；③id 必須從 "+start+" 連續編號到 "+end+"，不可跳號；④結局走向：第 "+N+" 場是整個故事的最終收尾。\n"+
-          '[{"id":'+start+',"name":"場景名4字內","time":"'+((start-1)*5)+'-'+(start*5)+'秒","location":"地點繁中","caption":"字幕10字內繁中","action":"動作25字內繁中","lighting":"光線繁中","emotion_note":"情感繁中","characters_in_scene":["出現角色名"],"composition":"角色構圖（朝向互動）繁中","image_prompt":"英文70字以上，FORBIDDEN=front-facing static pose，REQUIRED=natural action pose，含場景+動態姿勢+互動+光線","video_prompt":"導演動態咒語英文80字以上：根據image_prompt讓場景動起來，含①角色動作延續②運鏡（push in/pull out/tracking/crane/dolly zoom/pan/handheld）③光線變化④聲音提示⑤情緒收尾"}]\n按此格式生成 '+count+' 個場景，id 從 '+start+' 連續到 '+end;
+        var p2="只輸出JSON陣列，不要其他文字。\n"+prevCtx+"故事："+part1.enhanced_story+"\n風格："+S.name+"\n情緒："+E+"\n角色："+part1.characters.map(function(c){return c.name;}).join('、')+"\n總共"+N+"個場景，現在生成第 "+start+" 到第 "+end+" 個。\n【鐵則】①每個場景必須延續上述前置場景的劇情、不可重複；②每場景要有獨特進展（時間或地點或動作或情緒至少要變化）；③id 必須從 "+start+" 連續編號到 "+end+"，不可跳號；④結局走向：第 "+N+" 場是整個故事的最終收尾；⑤image_prompt 必須以電影鏡位開頭（low angle shot/close-up/over-the-shoulder/dutch angle/wide shot/POV/extreme close-up 等），禁止連續同鏡位，依場景情緒挑最戲劇化的鏡頭。\n"+
+          '[{"id":'+start+',"name":"場景名4字內","time":"'+((start-1)*5)+'-'+(start*5)+'秒","location":"地點繁中","caption":"字幕10字內繁中","action":"動作25字內繁中","lighting":"光線繁中","emotion_note":"情感繁中","characters_in_scene":["出現角色名"],"composition":"角色構圖（朝向互動）繁中","image_prompt":"英文80字以上，**必須以鏡位英文詞開頭**（low angle shot/close-up/over-the-shoulder/dutch angle/wide shot/POV/extreme close-up 等任一），結構：[shot type] of [character pose+action] in [environment], [light direction], [framing/depth detail], [lens hint]","video_prompt":"導演動態咒語英文80字以上：根據image_prompt讓場景動起來，含①角色動作延續②運鏡（push in/pull out/tracking/crane/dolly zoom/pan/handheld）③光線變化④聲音提示⑤情緒收尾"}]\n按此格式生成 '+count+' 個場景，id 從 '+start+' 連續到 '+end;
         try{
           var raw2=await callGeminiWithRetry(p2);
           var newScenes=safeParseJson(raw2);
@@ -476,6 +534,10 @@ async function generate(){
 }
 function renderAll(data,S,styleKey){
   var results=document.getElementById('results');results.innerHTML='';results.style.cssText='display:flex;flex-direction:column;gap:24px;';currentData=data;currentStyle=S;
+  // 讀取當前選擇的情緒，並建立風格/情緒強制後綴（生圖時直接附加，不再依賴 AI 是否寫進 image_prompt）
+  var emotionKeyNow=document.getElementById('emotion').value;
+  var emotionNow=EMOTIONS[emotionKeyNow]||'';
+  var STYLE_LOCK=', '+(S.base||'')+', '+emotionNow+', consistent character design, unified color grading';
   var hint=el('div','step-hint');hint.innerHTML='📋 <strong>製作流程：</strong><br>① 在「01 角色參考圖」點「生成」，再點圖上的 ✓ 選為參考<br>② 到「02 分鏡場景」生成每個場景（會自動帶入已選角色）';results.appendChild(hint);
   var b1=el('div','block');var h1=el('div','bhead');var n1=el('span','bnum n1');n1.textContent='01';var t1=el('span','btitle');t1.textContent='角色參考圖';var s1=el('span','bsub');s1.textContent='先選好角色，再生成場景';h1.appendChild(n1);h1.appendChild(t1);h1.appendChild(s1);b1.appendChild(h1);
   var storyBox=el('div','story-box');storyBox.textContent=data.enhanced_story;b1.appendChild(storyBox);
@@ -485,7 +547,7 @@ function renderAll(data,S,styleKey){
     var tab=el('div','char-tab');tab.textContent=ch.name;if(selectedCharImages[ch.name])tab.classList.add('selected');if(idx===0)tab.classList.add('active');tabs.appendChild(tab);
     var panel=el('div','char-panel');if(idx===0)panel.classList.add('active');
     var layout=el('div','char-layout');var leftCol=el('div');leftCol.style.cssText='display:flex;flex-direction:column;align-items:center;gap:0;';
-    var charPrompt=ch.image_prompt+CHAR_NO_TEXT;
+    var charPrompt=ch.image_prompt+STYLE_LOCK+CHAR_NO_TEXT;
     var imgBox=makeCharImgBox(ch.name,charPrompt,function(b64){
       selectedCharImages[ch.name]={base64:b64};window.selectedCharImages=selectedCharImages;tab.classList.add('selected');
       var existBadge=panel.querySelector('.char-selected-row');
@@ -518,7 +580,7 @@ function renderAll(data,S,styleKey){
     }
     var sp=el('div','sc-prompt');var pl=el('div');pl.style.cssText='display:flex;align-items:center;gap:6px;margin-bottom:6px;';
     var pd=el('div');pd.style.cssText='width:5px;height:5px;border-radius:50%;background:var(--gold);flex-shrink:0;';var pt=el('span');pt.style.cssText='font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--gold2);';pt.textContent='靜態圖片咒語';pl.appendChild(pd);pl.appendChild(pt);sp.appendChild(pl);
-    var compositionHint=sc.composition?('Characters composition and direction: '+sc.composition+'. '):'';var fullPrompt=compositionHint+sc.image_prompt+NO_TEXT;sp.appendChild(makePBox(fullPrompt,null));card.appendChild(sp);
+    var compositionHint=sc.composition?('Characters composition and direction: '+sc.composition+'. '):'';var fullPrompt=compositionHint+sc.image_prompt+STYLE_LOCK+NO_TEXT;sp.appendChild(makePBox(fullPrompt,null));card.appendChild(sp);
     if(sc.video_prompt||sc.animation_prompt){
       var ap=el('div','sc-prompt');var apl=el('div');apl.style.cssText='display:flex;align-items:center;gap:6px;margin-bottom:6px;';
       var apd=el('div');apd.style.cssText='width:5px;height:5px;border-radius:50%;background:var(--teal);flex-shrink:0;';var apt=el('span');apt.style.cssText='font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--teal);';apt.textContent='動畫咒語（Veo / Kling）';
