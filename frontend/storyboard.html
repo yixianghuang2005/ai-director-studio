@@ -388,7 +388,27 @@ async function generate(){
     }
     var raw1=await callGeminiWithRetry(p1);
     var part1;
-    try{part1=JSON.parse(raw1);}catch(parseErr){throw new Error('AI回應格式錯誤，請重試：'+parseErr.message);}
+    try{
+      // 清理可能的格式問題
+      var cleaned=raw1.replace(/```json|```/g,'').trim();
+      // 嘗試修復常見的 JSON 錯誤
+      if(!cleaned.endsWith('}')){
+        // 如果 JSON 沒有正確結尾，記錄錯誤但嘗試修復
+        console.warn('JSON 似乎不完整，嘗試修復...');
+        // 計算需要補齊的括號
+        var openBraces=(cleaned.match(/\{/g)||[]).length;
+        var closeBraces=(cleaned.match(/\}/g)||[]).length;
+        var openBrackets=(cleaned.match(/\[/g)||[]).length;
+        var closeBrackets=(cleaned.match(/\]/g)||[]).length;
+        // 補齊缺少的括號
+        for(var i=0;i<(openBrackets-closeBrackets);i++){cleaned+=']';}
+        for(var i=0;i<(openBraces-closeBraces);i++){cleaned+='}';}
+      }
+      part1=JSON.parse(cleaned);
+    }catch(parseErr){
+      console.error('原始回應:',raw1.substring(0,500)+'...');
+      throw new Error('AI回應格式錯誤 ('+parseErr.message+')，請重試。如果問題持續，請簡化故事內容。');
+    }
     if(!part1.scenes||part1.scenes.length<N){
       var allScenes=part1.scenes||[];var batchSize=5;
       // 多 2 次容錯，避免 AI 某批次回得不夠就漏掉場景
@@ -415,11 +435,25 @@ async function generate(){
           '[{"id":'+start+',"name":"場景名4字內","time":"'+((start-1)*5)+'-'+(start*5)+'秒","location":"地點繁中","caption":"字幕10字內繁中","action":"動作25字內繁中","lighting":"光線繁中","emotion_note":"情感繁中","characters_in_scene":["出現角色名"],"composition":"角色構圖（朝向互動）繁中","image_prompt":"英文70字以上，FORBIDDEN=front-facing static pose，REQUIRED=natural action pose，含場景+動態姿勢+互動+光線","video_prompt":"導演動態咒語英文80字以上：根據image_prompt讓場景動起來，含①角色動作延續②運鏡（push in/pull out/tracking/crane/dolly zoom/pan/handheld）③光線變化④聲音提示⑤情緒收尾"}]\n按此格式生成 '+count+' 個場景，id 從 '+start+' 連續到 '+end;
         try{
           var raw2=await callGeminiWithRetry(p2);
-          var newScenes=JSON.parse(raw2);
+          // 清理並修復 JSON
+          var cleaned2=raw2.replace(/```json|```/g,'').trim();
+          if(!cleaned2.endsWith(']')){
+            console.warn('批次 JSON 不完整，嘗試修復...');
+            var openBrackets2=(cleaned2.match(/\[/g)||[]).length;
+            var closeBrackets2=(cleaned2.match(/\]/g)||[]).length;
+            var openBraces2=(cleaned2.match(/\{/g)||[]).length;
+            var closeBraces2=(cleaned2.match(/\}/g)||[]).length;
+            for(var i=0;i<(openBraces2-closeBraces2);i++){cleaned2+='}';}
+            for(var i=0;i<(openBrackets2-closeBrackets2);i++){cleaned2+=']';}
+          }
+          var newScenes=JSON.parse(cleaned2);
           if(Array.isArray(newScenes)&&newScenes.length>0){
             allScenes=allScenes.concat(newScenes);
           }
-        }catch(parseErr){console.error('批次解析失敗',parseErr);break;}
+        }catch(parseErr){
+          console.error('批次解析失敗',parseErr,'原始內容:',raw2?raw2.substring(0,300)+'...':'無');
+          break;
+        }
       }
       part1.scenes=allScenes;
     }
